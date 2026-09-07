@@ -1,0 +1,9 @@
+{
+  "name": "Audrey #22 Learning OS",
+  "short_name": "Audrey22",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#eef4f8",
+  "theme_color": "#0b1f3a",
+  "description": "Daily Grade 7 learning, review, skill tracking, and milestone radar."
+}

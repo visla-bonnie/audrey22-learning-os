@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1f3a" />
+  <meta name="description" content="Audrey #22 Learning OS — daily Grade 7 practice, review, skill tracking, and school milestone radar." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Audrey #22 Learning OS</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">22</div>
+      <div>
+        <div class="brand-title">AUDREY #22</div>
+        <div class="brand-subtitle">LEARNING OS · ROAD TO GREATNESS</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="quickStartBtn" class="btn btn-primary">▶ Start Today's Training</button>
+      <button id="exportBtn" class="btn btn-ghost" title="Export progress">Export</button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="App sections">
+    <button class="tab active" data-view="dashboard">🏠 Dashboard</button>
+    <button class="tab" data-view="training">🔥 Daily Training</button>
+    <button class="tab" data-view="skills">🧠 Skill Tracker</button>
+    <button class="tab" data-view="review">🔁 Review Queue</button>
+    <button class="tab" data-view="roadmap">🗺️ Roadmap</button>
+    <button class="tab" data-view="parent">📡 Parent Radar</button>
+  </nav>
+
+  <main class="shell">
+    <section id="view-dashboard" class="view active">
+      <div class="hero card">
+        <div>
+          <div class="eyebrow">CURRENT SEASON · 7TH GRADE · HILLBROOK</div>
+          <h1>Today's Game Plan</h1>
+          <p class="hero-copy">School mastery + strong foundations + advanced thinking. No random busywork. Train what matters, review what was missed, and keep the next milestone visible.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" id="heroStartBtn">Start Training</button>
+            <button class="btn btn-secondary" data-jump="parent">Update School Focus</button>
+          </div>
+        </div>
+        <div class="scoreboard">
+          <div class="score-item"><span id="todayProgress">0/0</span><small>Today</small></div>
+          <div class="score-item"><span id="streakCount">0</span><small>Day Streak</small></div>
+          <div class="score-item"><span id="xpCount">0</span><small>XP</small></div>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <section class="card">
+          <div class="section-head"><h2>🏫 School Alignment</h2><span class="pill">LIVE PLAN</span></div>
+          <div class="alignment-grid">
+            <div class="alignment-box">
+              <span class="kicker">HILLBROOK NOW</span>
+              <strong id="dashSchoolFocus">Not set yet</strong>
+              <small>Use Parent Radar to enter this week's topics.</small>
+            </div>
+            <div class="alignment-box">
+              <span class="kicker">ZHANG / THINK ACADEMY</span>
+              <strong id="dashAdvancedFocus">Not set yet</strong>
+              <small>Advanced work stays in the mix without replacing foundations.</small>
+            </div>
+            <div class="alignment-box highlight">
+              <span class="kicker">#22 MUST KNOW</span>
+              <strong id="mustKnowText">Percent, ratios, equations, evidence, inference, scientific reasoning.</strong>
+              <small>Core Grade 7 skills Audrey should own cold.</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-head"><h2>🚨 Next Milestone</h2><span class="pill warn">DON'T MISS</span></div>
+          <div class="milestone">
+            <div class="milestone-icon">🎯</div>
+            <div>
+              <h3 id="milestoneName">8th Grade Math Placement Readiness</h3>
+              <p id="milestoneDate">Date: needs confirmation with school</p>
+              <div class="meter"><span id="milestoneMeter" style="width: 35%"></span></div>
+              <small id="milestoneNote">Build evidence: school performance, placement-style accuracy, ERB growth, and teacher feedback.</small>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="section-head"><h2>📊 This Week</h2><span class="subtle">Accuracy by subject</span></div>
+        <div id="weeklySubjectCards" class="subject-cards"></div>
+      </section>
+
+      <div class="grid two">
+        <section class="card">
+          <div class="section-head"><h2>🔥 Needs Attention</h2><span class="subtle">Lowest recent skills</span></div>
+          <div id="needsAttention" class="list-stack"></div>
+        </section>
+        <section class="card">
+          <div class="section-head"><h2>🏆 Recent Wins</h2><span class="subtle">Skills moving toward mastery</span></div>
+          <div id="recentWins" class="list-stack"></div>
+        </section>
+      </div>
+
+      <section class="quote-card">
+        <strong>#22 RULE:</strong> Learn it. Prove it. Review it. Master it. Then level up. 🏀
+      </section>
+    </section>
+
+    <section id="view-training" class="view">
+      <div class="training-header card">
+        <div>
+          <div class="eyebrow">DAILY TRAINING</div>
+          <h1 id="trainingTitle">Today's #22 Workout</h1>
+          <p id="trainingSummary">8 Math · Reading Set · English · Science · Social Studies · Boss Challenge · Due Reviews</p>
+        </div>
+        <div class="training-status">
+          <span id="sessionProgressText">0 / 0 complete</span>
+          <div class="meter big"><span id="sessionProgressBar" style="width:0%"></span></div>
+        </div>
+      </div>
+
+      <div id="trainingEmpty" class="card empty-state">
+        <div class="big-icon">🏁</div>
+        <h2>Ready when you are.</h2>
+        <p>Generate today's balanced practice set. It will favor Hillbrook topics, protect foundations, keep advanced math alive, and pull in due review questions.</p>
+        <button id="generateSessionBtn" class="btn btn-primary">Build Today's Training</button>
+      </div>
+
+      <div id="questionStage" class="hidden">
+        <div class="question-meta-row">
+          <span id="qSubject" class="subject-badge">Math</span>
+          <span id="qSkill" class="skill-label">Ratios</span>
+          <span id="qLevel" class="level-badge">CORE</span>
+          <span id="qCounter" class="q-counter">1 / 25</span>
+        </div>
+
+        <article class="card question-card">
+          <div id="passageBox" class="passage hidden"></div>
+          <h2 id="qPrompt">Question</h2>
+          <div id="qChoices" class="choices"></div>
+          <div id="openResponseWrap" class="hidden">
+            <textarea id="openResponse" rows="5" placeholder="Write your response here..."></textarea>
+          </div>
+          <div class="question-actions">
+            <button id="hintBtn" class="btn btn-ghost">💡 Hint</button>
+            <button id="submitAnswerBtn" class="btn btn-primary">Check Answer</button>
+          </div>
+          <div id="hintBox" class="feedback hint hidden"></div>
+          <div id="feedbackBox" class="feedback hidden"></div>
+          <div id="explanationBox" class="explanation hidden"></div>
+          <div class="question-nav hidden" id="questionNav">
+            <button id="nextQuestionBtn" class="btn btn-primary">Next →</button>
+          </div>
+        </article>
+      </div>
+
+      <div id="sessionComplete" class="card complete-card hidden">
+        <div class="trophy">🏆</div>
+        <h2>Workout Complete</h2>
+        <p id="sessionResultText"></p>
+        <div id="sessionResultStats" class="scoreboard compact"></div>
+        <button class="btn btn-secondary" data-jump="dashboard">Back to Dashboard</button>
+      </div>
+    </section>
+
+    <section id="view-skills" class="view">
+      <div class="page-head">
+        <div><div class="eyebrow">SKILL TREE</div><h1>Know What Is Actually Mastered</h1></div>
+        <div class="legend"><span>⬜ Not checked</span><span>🟡 Learning</span><span>🔵 Practicing</span><span>🟢 Mastered</span><span>🔴 Needs work</span></div>
+      </div>
+      <div id="skillsContainer" class="skills-container"></div>
+    </section>
+
+    <section id="view-review" class="view">
+      <div class="page-head">
+        <div><div class="eyebrow">SPACED REVIEW</div><h1>Missed It? It Comes Back.</h1></div>
+        <button id="startReviewBtn" class="btn btn-primary">Start Due Reviews</button>
+      </div>
+      <section class="card">
+        <div class="section-head"><h2>🔁 Review Queue</h2><span id="reviewCount" class="pill">0 DUE</span></div>
+        <div id="reviewQueueList" class="review-list"></div>
+      </section>
+    </section>
+
+    <section id="view-roadmap" class="view">
+      <div class="page-head"><div><div class="eyebrow">AUDREY'S U.S. SCHOOL JOURNEY #22</div><h1>Milestones, Not Surprises</h1></div></div>
+      <div id="roadmapContainer" class="roadmap"></div>
+    </section>
+
+    <section id="view-parent" class="view">
+      <div class="page-head">
+        <div><div class="eyebrow">PARENT RADAR</div><h1>Tell the App What School Is Doing</h1><p class="subtle">This is how daily practice stays aligned to Hillbrook and advanced tutoring.</p></div>
+      </div>
+
+      <div class="grid two">
+        <section class="card form-card">
+          <h2>🏫 This Week at Hillbrook</h2>
+          <label>Math topic(s)<input id="schoolMathInput" placeholder="e.g. proportional relationships, percent change" /></label>
+          <label>English topic(s)<input id="schoolEnglishInput" placeholder="e.g. inference, evidence, sentence structure" /></label>
+          <label>Science topic(s)<input id="schoolScienceInput" placeholder="e.g. ecosystems, experimental design" /></label>
+          <label>History / Social Studies<input id="schoolHistoryInput" placeholder="e.g. ancient civilizations, primary sources" /></label>
+          <label>Notes from teachers<textarea id="schoolNotesInput" rows="4" placeholder="Quiz Friday; teacher said show work; writing needs stronger evidence..."></textarea></label>
+        </section>
+
+        <section class="card form-card">
+          <h2>🚀 Advanced Track</h2>
+          <label>Zhang / Think Academy math<input id="advancedMathInput" placeholder="e.g. systems of equations, quadratics" /></label>
+          <label>Other advanced work<input id="advancedOtherInput" placeholder="e.g. advanced vocabulary, coding, science enrichment" /></label>
+          <h2 class="form-subhead">🎯 Next Milestone</h2>
+          <label>Milestone<input id="milestoneInput" placeholder="e.g. 8th Grade Math Placement" /></label>
+          <label>Date / window<input id="milestoneDateInput" placeholder="e.g. Confirm with school / March 2027" /></label>
+          <label>Readiness notes<textarea id="milestoneNotesInput" rows="4" placeholder="What evidence matters? What needs to improve?"></textarea></label>
+        </section>
+      </div>
+
+      <div class="grid two">
+        <section class="card">
+          <div class="section-head"><h2>🚨 Placement Intelligence Checklist</h2><span class="pill warn">HILLBROOK</span></div>
+          <div id="placementChecklist" class="checklist"></div>
+        </section>
+
+        <section class="card form-card">
+          <h2>⚙️ Training Mix</h2>
+          <p class="subtle">Default is balanced for a strong 7th grader with advanced math exposure.</p>
+          <label>Daily question target<input id="dailyTargetInput" type="number" min="10" max="45" step="1" value="25" /></label>
+          <label>Math intensity<select id="mathIntensityInput"><option value="core">Core + Placement</option><option value="balanced" selected>Balanced + Advanced</option><option value="advanced">Advanced Push</option></select></label>
+          <div class="button-row">
+            <button id="saveParentBtn" class="btn btn-primary">Save Plan</button>
+            <button id="resetBtn" class="btn btn-danger">Reset All Progress</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>DISCIPLINE × GRATITUDE × GROWTH × IMPACT</span>
+    <strong>#22 ALWAYS</strong>
+    <span>THE BEST IS YET TO COME</span>
+  </footer>
+
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
