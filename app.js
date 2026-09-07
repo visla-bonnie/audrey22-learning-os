@@ -10,7 +10,8 @@
     {name:'Quantitative Reasoning',scale:551,nn:57,inorm:22,focus:'Patterns · comparisons · generalization · data reasoning'},
     {name:'Mathematics',scale:558,nn:59,inorm:29,focus:'Concepts · application · computation · word problems'}
   ];
-  const STORE_KEY='audrey22_learning_os_v1';
+  const STORE_KEY='audrey22_learning_os_v3';
+  const APP_VERSION='3.0';
   const todayKey=()=>new Date().toISOString().slice(0,10);
   const addDays=(dateStr,n)=>{const d=new Date(dateStr+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -32,6 +33,7 @@
   let currentIndex=0;
   let selectedChoice=null;
   let currentSessionMode='daily';
+  setTimeout(sanitizeStoredState,0);
 
   function load(){
     try{const raw=localStorage.getItem(STORE_KEY); if(!raw)return defaultState(); return deepMerge(defaultState(),JSON.parse(raw));}catch(e){return defaultState()}
@@ -47,6 +49,14 @@
   function rngFor(s){return BANK.mulberry32(seedFromString(s))}
   function choice(arr,rng){return arr[Math.floor(rng()*arr.length)]}
   function unique(arr){return [...new Set(arr)]}
+  function validQuestion(q){
+    return !!(q && typeof q.prompt==='string' && q.prompt.trim() && Array.isArray(q.choices) && q.choices.length>=2 && Number.isInteger(q.answer) && q.answer>=0 && q.answer<q.choices.length);
+  }
+  function sanitizeStoredState(){
+    if(state.session && (!Array.isArray(state.session.items) || state.session.items.some(q=>!validQuestion(q)))) state.session=null;
+    state.reviewQueue=(state.reviewQueue||[]).filter(r=>r && validQuestion(r.question));
+    save();
+  }
 
   function switchView(name){
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -117,11 +127,13 @@
     const reviewCap=Math.min(4,Math.max(1,Math.floor(target*.16)));
     due.slice(0,reviewCap).forEach(r=>items.push({...r.question,_reviewId:r.id,_reviewStage:r.stage||0,level:'REVIEW'}));
 
-    const mathCount=Math.max(5,Math.round(target*.32));
+    // V3 works even with ZERO parent input. Parent data only re-weights the automatic plan.
+    const mathCount=Math.max(6,Math.round(target*.32));
     const readingCount=4;
-    const englishCount=Math.max(3,Math.round(target*.16));
-    const scienceCount=Math.max(3,Math.round(target*.16));
-    const socialCount=Math.max(2,Math.round(target*.12));
+    const englishCount=Math.max(4,Math.round(target*.16));
+    const scienceCount=Math.max(3,Math.round(target*.12));
+    const socialCount=Math.max(3,Math.round(target*.12));
+    const transferCount=Math.max(2,Math.round(target*.08));
     const reasoningCount=1;
 
     const schoolMath=inferMathSkills(state.parent.schoolMath);
@@ -139,7 +151,7 @@
       else if((intensity==='advanced' && i>=Math.ceil(mathCount*.55)) || (intensity==='balanced' && i>=Math.ceil(mathCount*.78))){pool=advanced.length?advanced:advDefault;level='ADVANCED'}
       else if(i%3===1){pool=placement;level='PLACEMENT'}
       else pool=foundation;
-      const skill=choice(pool,rng); mathSkills.push(skill); items.push(BANK.mathQuestion(skill,rng,level));
+      const skill=choice(pool,rng); mathSkills.push(skill); { const q=BANK.mathQuestion(skill,rng,level); q.origin=level==='SCHOOL'?'Hillbrook focus':(level==='ERB PRIORITY'?'ERB CTP skill map':(level==='PLACEMENT'?'Grade 7 / placement core':(level==='ADVANCED'?'Advanced extension':'CA Grade 7 core'))); items.push(q); }
     }
 
     // Keep one coherent reading passage per day.
@@ -151,6 +163,7 @@
     addStatic(items,BANK.english,englishCount,rng,unique([...englishSchool,...erbEnglish]));
     addStatic(items,BANK.science,scienceCount,rng,inferStaticSkills(state.parent.schoolScience,'Science'));
     addStatic(items,BANK.social,socialCount,rng,inferStaticSkills(state.parent.schoolHistory,'Social Studies'));
+    addStatic(items,BANK.transfer,transferCount,rng,[]);
     addStatic(items,BANK.reasoning,reasoningCount,rng,[]);
 
     // Trim or fill to target.
@@ -194,13 +207,14 @@
     if(!s || s.completed){$('trainingEmpty').classList.remove('hidden');$('questionStage').classList.add('hidden');$('sessionComplete').classList.add('hidden');return}
     $('trainingEmpty').classList.add('hidden');$('questionStage').classList.remove('hidden');$('sessionComplete').classList.add('hidden');
     $('trainingTitle').textContent=s.mode==='review'?'Review Workout':'Today’s #22 Workout';
-    $('trainingSummary').textContent=s.mode==='review'?`${s.items.length} due review questions`:`${s.items.filter(x=>x.subject==='Math').length} Math · Reading · English · Science · Social Studies · Boss Challenge · Review`;
+    $('trainingSummary').textContent=s.mode==='review'?`${s.items.length} due review questions`:`${s.items.filter(x=>x.subject==='Math').length} Math · Reading · English · Science · Social Studies · Transfer Prep · Boss Challenge · Review`;
     currentIndex=Math.min(s.index||0,s.items.length-1); updateSessionProgress();
   }
 
   function showCurrentQuestion(){
     const s=state.session;if(!s||s.completed)return;
     const q=s.items[currentIndex]; if(!q){completeSession();return}
+    if(!validQuestion(q)){ state.session=null; save(); buildDailySession(true); currentIndex=0; renderTraining(); return showCurrentQuestion(); }
     selectedChoice=null;
     $('qSubject').textContent=q.subject;
     $('qSkill').textContent=q.skill;
@@ -224,7 +238,7 @@
     const buttons=[...document.querySelectorAll('.choice')];buttons.forEach((b,i)=>{b.classList.remove('selected');if(i===q.answer)b.classList.add('correct');else if(i===selectedChoice&&!correct)b.classList.add('incorrect');b.disabled=true});
     $('feedbackBox').textContent=correct?'✅ Correct — good read.':'❌ Not yet. Use the explanation, then this skill will come back in review.';
     $('feedbackBox').className='feedback '+(correct?'correct':'incorrect');
-    $('explanationBox').innerHTML=`<strong>WHY:</strong> ${esc(q.explanation)}<br><strong>SKILL:</strong> ${esc(q.skill)}`;$('explanationBox').classList.remove('hidden');$('questionNav').classList.remove('hidden');$('submitAnswerBtn').disabled=true;
+    $('explanationBox').innerHTML=`<strong>WHY:</strong> ${esc(q.explanation)}<br><strong>SKILL:</strong> ${esc(q.skill)}${q.origin?`<br><strong>TRACK:</strong> ${esc(q.origin)}`:''}`;$('explanationBox').classList.remove('hidden');$('questionNav').classList.remove('hidden');$('submitAnswerBtn').disabled=true;
     recordAttempt(q,correct);s.answers[currentIndex]={correct,selected:selectedChoice};save();updateSessionProgress();
   }
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0b1f3a" />
-  <meta name="description" content="Audrey #22 Learning OS — daily Grade 7 practice, review, skill tracking, and school milestone radar." />
+  <meta name="description" content="Audrey #22 Learning OS — automatic Grade 7 mastery practice, ERB/transfer readiness, review, skill tracking, and school milestone radar." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
   <title>Audrey #22 Learning OS</title>
@@ -42,7 +42,7 @@
           <p class="hero-copy">School mastery + strong foundations + advanced thinking. No random busywork. Train what matters, review what was missed, and keep the next milestone visible.</p>
           <div class="hero-actions">
             <button class="btn btn-primary" id="heroStartBtn">Start Training</button>
-            <button class="btn btn-secondary" data-jump="parent">Update School Focus</button>
+            <button class="btn btn-secondary" data-jump="parent">Optional: Add School Focus</button>
           </div>
         </div>
         <div class="scoreboard">
@@ -96,6 +96,19 @@
       </section>
 
       <section class="card">
+        <div class="section-head"><h2>⚙️ #22 Auto Curriculum Engine</h2><span class="pill">NO PARENT INPUT REQUIRED</span></div>
+        <p class="subtle">Every day the app automatically builds original practice from broad Grade 7 skill maps. Parent input is optional and only makes the mix more Hillbrook-specific.</p>
+        <div class="alignment-grid">
+          <div class="alignment-box"><span class="kicker">CA GRADE 7 CORE</span><strong>Math · ELA · Science · World History</strong><small>California Grade 7 standards and common U.S. middle-school foundations.</small></div>
+          <div class="alignment-box"><span class="kicker">ERB CTP</span><strong>Verbal · Quantitative · Reading · Writing · Math</strong><small>Extra weight follows Audrey's Spring 2026 ERB profile.</small></div>
+          <div class="alignment-box"><span class="kicker">TRANSFER READINESS</span><strong>ISEE / independent-school style skills</strong><small>Verbal reasoning, quantitative reasoning, reading, math achievement, writing.</small></div>
+          <div class="alignment-box"><span class="kicker">WRITING & GRAMMAR</span><strong>Standards-aligned skill practice</strong><small>Grammar, usage, mechanics, organization, evidence, revision, style.</small></div>
+          <div class="alignment-box"><span class="kicker">QUICK PRACTICE</span><strong>Flashcard · Learn · Test mindset</strong><small>Short drills, retrieval, mixed review, and timed-ready questions.</small></div>
+          <div class="alignment-box highlight"><span class="kicker">HILLBROOK + ZHANG</span><strong>Optional precision layer</strong><small>If Mom adds current topics, the engine re-weights practice—but it never depends on that input.</small></div>
+        </div>
+      </section>
+
+      <section class="card">
         <div class="section-head"><h2>📊 This Week</h2><span class="subtle">Accuracy by subject</span></div>
         <div id="weeklySubjectCards" class="subject-cards"></div>
       </section>
@@ -121,7 +134,7 @@
         <div>
           <div class="eyebrow">DAILY TRAINING</div>
           <h1 id="trainingTitle">Today's #22 Workout</h1>
-          <p id="trainingSummary">8 Math · Reading Set · English · Science · Social Studies · Boss Challenge · Due Reviews</p>
+          <p id="trainingSummary">Math · Reading · English · Science · Social Studies · Transfer Prep · Boss Challenge · Due Reviews</p>
         </div>
         <div class="training-status">
           <span id="sessionProgressText">0 / 0 complete</span>
@@ -132,7 +145,7 @@
       <div id="trainingEmpty" class="card empty-state">
         <div class="big-icon">🏁</div>
         <h2>Ready when you are.</h2>
-        <p>Generate today's balanced practice set. It will favor Hillbrook topics, target Audrey's ERB growth areas, protect foundations, keep advanced math alive, and pull in due review questions.</p>
+        <p>Generate today's automatic practice set. It works even when Parent Radar is blank: Grade 7 core + Audrey's ERB priorities + transfer readiness + advanced extension + due reviews. Hillbrook/Zhang input is optional precision, not a requirement.</p>
         <button id="generateSessionBtn" class="btn btn-primary">Build Today's Training</button>
       </div>
 
