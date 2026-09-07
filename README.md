@@ -1,4 +1,4 @@
-# Audrey #22 Learning OS — V3.1
+# Audrey #22 Learning OS — V3.2
 
 A static web app for Audrey's daily Grade 7 mastery training. V3 is **automatic by default**: it does not require parent-entered school topics to generate useful daily practice.
 
@@ -27,3 +27,11 @@ Upload all files in this folder to the root of the existing `audrey22-learning-o
 - Fixed Daily Training tab so it creates/resumes today's workout and immediately renders the current question.
 - Training view now always renders the active question instead of only drawing the session shell.
 - Updated service worker caching so GitHub Pages updates activate more reliably.
+
+
+## V3.2 training navigation fix
+- Daily workout now follows the visible subject order: Math → Reading → English → Science → Social Studies → Transfer Prep → Boss Challenge → Review.
+- The subject labels are real clickable tabs, with per-section progress counts.
+- Tapping a subject jumps to the first unfinished question in that section.
+- Current question metadata now shows both global progress and section progress.
+- Existing V3.1 daily session is rebuilt once so old shuffled ordering cannot survive the upgrade; other progress and Parent Radar data are preserved.

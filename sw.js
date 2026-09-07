@@ -1,4 +1,4 @@
-const CACHE = 'audrey22-v3-1';
+const CACHE = 'audrey22-v3-2';
 const ASSETS = ['./','./index.html','./styles.css','./questions.js','./app.js','./manifest.webmanifest'];
 
 self.addEventListener('install', event => {

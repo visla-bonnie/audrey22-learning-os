@@ -11,7 +11,18 @@
     {name:'Mathematics',scale:558,nn:59,inorm:29,focus:'Concepts · application · computation · word problems'}
   ];
   const STORE_KEY='audrey22_learning_os_v3';
-  const APP_VERSION='3.1';
+  const APP_VERSION='3.2';
+  const SESSION_PLAN_VERSION='ordered-subject-tabs-v1';
+  const TRAINING_SECTIONS=[
+    {key:'math',label:'Math',icon:'🧮'},
+    {key:'reading',label:'Reading',icon:'📖'},
+    {key:'english',label:'English',icon:'✍️'},
+    {key:'science',label:'Science',icon:'🔬'},
+    {key:'social',label:'Social Studies',icon:'🌎'},
+    {key:'transfer',label:'Transfer Prep',icon:'🎓'},
+    {key:'boss',label:'Boss Challenge',icon:'🧠'},
+    {key:'review',label:'Review',icon:'🔁'}
+  ];
   const todayKey=()=>new Date().toISOString().slice(0,10);
   const addDays=(dateStr,n)=>{const d=new Date(dateStr+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -53,7 +64,7 @@
     return !!(q && typeof q.prompt==='string' && q.prompt.trim() && Array.isArray(q.choices) && q.choices.length>=2 && Number.isInteger(q.answer) && q.answer>=0 && q.answer<q.choices.length);
   }
   function sanitizeStoredState(){
-    if(state.session && (!Array.isArray(state.session.items) || state.session.items.some(q=>!validQuestion(q)))) state.session=null;
+    if(state.session && (!Array.isArray(state.session.items) || state.session.items.some(q=>!validQuestion(q)) || (state.session.mode==='daily' && state.session.planVersion!==SESSION_PLAN_VERSION))) state.session=null;
     state.reviewQueue=(state.reviewQueue||[]).filter(r=>r && validQuestion(r.question));
     save();
   }
@@ -118,26 +129,56 @@
     el.innerHTML=ERB_BASELINE.map(x=>{const t=erbTier(x.inorm);return `<div class="erb-score ${t.cls}"><div class="erb-score-top"><strong>${esc(x.name)}</strong><span>${t.label}</span></div><div class="erb-numbers"><b>IN ${x.inorm}</b><small>NN ${x.nn} · Scale ${x.scale}</small></div><p>${esc(x.focus)}</p></div>`}).join('');
   }
 
+  function sectionKeyForQuestion(q){
+    if(q && (q._reviewId || q.level==='REVIEW')) return 'review';
+    const map={Math:'math',Reading:'reading',English:'english',Science:'science','Social Studies':'social','Transfer Prep':'transfer',Reasoning:'boss'};
+    return map[q?.subject]||'english';
+  }
+
+  function allocateTrainingCounts(total){
+    const defs=[
+      ['math',.32],['reading',.16],['english',.16],['science',.12],['social',.12],['transfer',.08],['boss',.04]
+    ];
+    const min=total>=defs.length?1:0;
+    const rows=defs.map(([key,w],idx)=>{
+      const raw=total*w;
+      return {key,w,idx,raw,count:Math.max(min,Math.floor(raw)),frac:raw-Math.floor(raw)};
+    });
+    let sum=rows.reduce((a,r)=>a+r.count,0);
+    while(sum>total){
+      const candidates=rows.filter(r=>r.count>min).sort((a,b)=>a.frac-b.frac || b.count-a.count || b.idx-a.idx);
+      if(!candidates.length)break;
+      candidates[0].count--;sum--;
+    }
+    while(sum<total){
+      const candidates=[...rows].sort((a,b)=>b.frac-a.frac || a.idx-b.idx);
+      candidates[(sum-total+10000)%candidates.length].count++;sum++;
+    }
+    return Object.fromEntries(rows.map(r=>[r.key,r.count]));
+  }
+
   function buildDailySession(forceNew=false){
     const date=todayKey();
-    if(!forceNew && state.session && state.session.date===date && state.session.mode==='daily' && !state.session.completed) return state.session;
+    if(!forceNew && state.session && state.session.date===date && state.session.mode==='daily' && !state.session.completed && state.session.planVersion===SESSION_PLAN_VERSION) return state.session;
     const rng=rngFor(date+'|'+JSON.stringify(state.parent));
     const target=Math.max(10,Math.min(45,Number(state.parent.dailyTarget)||25));
-    const items=[];
 
-    // Due review first, but cap it so the day remains balanced.
+    // Reviews belong at the END of the workout so the visible subject order is stable.
     const due=state.reviewQueue.filter(r=>r.due<=date).sort((a,b)=>a.due.localeCompare(b.due));
     const reviewCap=Math.min(4,Math.max(1,Math.floor(target*.16)));
-    due.slice(0,reviewCap).forEach(r=>items.push({...r.question,_reviewId:r.id,_reviewStage:r.stage||0,level:'REVIEW'}));
+    const reviewCount=Math.min(reviewCap,due.length);
+    const coreTarget=Math.max(7,target-reviewCount);
+    const counts=allocateTrainingCounts(coreTarget);
+    const groups={math:[],reading:[],english:[],science:[],social:[],transfer:[],boss:[],review:[]};
 
-    // V3 works even with ZERO parent input. Parent data only re-weights the automatic plan.
-    const mathCount=Math.max(6,Math.round(target*.32));
-    const readingCount=4;
-    const englishCount=Math.max(4,Math.round(target*.16));
-    const scienceCount=Math.max(3,Math.round(target*.12));
-    const socialCount=Math.max(3,Math.round(target*.12));
-    const transferCount=Math.max(2,Math.round(target*.08));
-    const reasoningCount=1;
+    // V3.2 works even with ZERO parent input. Parent data only re-weights the automatic plan.
+    const mathCount=counts.math;
+    const readingCount=counts.reading;
+    const englishCount=counts.english;
+    const scienceCount=counts.science;
+    const socialCount=counts.social;
+    const transferCount=counts.transfer;
+    const reasoningCount=counts.boss;
 
     const schoolMath=inferMathSkills(state.parent.schoolMath);
     const advanced=inferMathSkills(state.parent.advancedMath);
@@ -145,7 +186,6 @@
     const placement=['Ratios & Proportions','Percent','Equations','Word Problems','Geometry','Statistics','Probability','Inequalities'];
     const erbMath=['Quantitative Reasoning','Word Problems','Ratios & Proportions','Percent','Statistics','Geometry'];
     const advDefault=['Functions','Systems of Equations','Exponents & Polynomials','Quadratics'];
-    let mathSkills=[];
     const intensity=state.parent.mathIntensity;
     for(let i=0;i<mathCount;i++){
       let pool,level='CORE';
@@ -154,32 +194,49 @@
       else if((intensity==='advanced' && i>=Math.ceil(mathCount*.55)) || (intensity==='balanced' && i>=Math.ceil(mathCount*.78))){pool=advanced.length?advanced:advDefault;level='ADVANCED'}
       else if(i%3===1){pool=placement;level='PLACEMENT'}
       else pool=foundation;
-      const skill=choice(pool,rng); mathSkills.push(skill); { const q=BANK.mathQuestion(skill,rng,level); q.origin=level==='SCHOOL'?'Hillbrook focus':(level==='ERB PRIORITY'?'ERB CTP skill map':(level==='PLACEMENT'?'Grade 7 / placement core':(level==='ADVANCED'?'Advanced extension':'CA Grade 7 core'))); items.push(q); }
+      const skill=choice(pool,rng);
+      const q=BANK.mathQuestion(skill,rng,level);
+      q.origin=level==='SCHOOL'?'Hillbrook focus':(level==='ERB PRIORITY'?'ERB CTP skill map':(level==='PLACEMENT'?'Grade 7 / placement core':(level==='ADVANCED'?'Advanced extension':'CA Grade 7 core')));
+      groups.math.push(q);
     }
 
-    // Keep one coherent reading passage per day.
+    // One coherent reading passage per day; keep its questions together.
     const set=choice(BANK.readingSets,rng);
-    BANK.reading.filter(q=>q.readingSet===set.id).slice(0,readingCount).forEach(q=>items.push({...q}));
+    BANK.reading.filter(q=>q.readingSet===set.id).slice(0,readingCount).forEach(q=>groups.reading.push({...q}));
+    while(groups.reading.length<readingCount){
+      const candidates=BANK.reading.filter(q=>!groups.reading.some(x=>x.id===q.id));
+      if(!candidates.length)break;
+      groups.reading.push({...choice(candidates,rng)});
+    }
 
     const englishSchool=inferStaticSkills(state.parent.schoolEnglish,'English');
     const erbEnglish=['Verbal Reasoning','Writing Concepts & Skills','Writing Mechanics'];
-    addStatic(items,BANK.english,englishCount,rng,unique([...englishSchool,...erbEnglish]));
-    addStatic(items,BANK.science,scienceCount,rng,inferStaticSkills(state.parent.schoolScience,'Science'));
-    addStatic(items,BANK.social,socialCount,rng,inferStaticSkills(state.parent.schoolHistory,'Social Studies'));
-    addStatic(items,BANK.transfer,transferCount,rng,[]);
-    addStatic(items,BANK.reasoning,reasoningCount,rng,[]);
+    addStatic(groups.english,BANK.english,englishCount,rng,unique([...englishSchool,...erbEnglish]));
+    addStatic(groups.science,BANK.science,scienceCount,rng,inferStaticSkills(state.parent.schoolScience,'Science'));
+    addStatic(groups.social,BANK.social,socialCount,rng,inferStaticSkills(state.parent.schoolHistory,'Social Studies'));
+    addStatic(groups.transfer,BANK.transfer,transferCount,rng,[]);
+    addStatic(groups.boss,BANK.reasoning,reasoningCount,rng,[]);
+    due.slice(0,reviewCount).forEach(r=>groups.review.push({...r.question,_reviewId:r.id,_reviewStage:r.stage||0,level:'REVIEW'}));
 
-    // Trim or fill to target.
-    let shuffled=BANK.shuffle(rng,items);
-    // Keep reading questions adjacent for sanity.
-    const readingItems=shuffled.filter(q=>q.subject==='Reading');
-    shuffled=shuffled.filter(q=>q.subject!=='Reading');
-    const insertAt=Math.min(shuffled.length,Math.max(2,Math.floor(shuffled.length*.35)));
-    shuffled.splice(insertAt,0,...readingItems);
-    while(shuffled.length<target) shuffled.push(BANK.mathQuestion(choice(foundation,rng),rng,'CORE'));
-    if(shuffled.length>target) shuffled=shuffled.slice(0,target);
+    // Daily Training now follows the visible tab order exactly.
+    let ordered=TRAINING_SECTIONS.flatMap(sec=>groups[sec.key]||[]);
+    while(ordered.length<target){
+      const q=BANK.mathQuestion(choice(foundation,rng),rng,'CORE');
+      groups.math.push(q);
+      ordered=TRAINING_SECTIONS.flatMap(sec=>groups[sec.key]||[]);
+    }
+    if(ordered.length>target){
+      // Remove overflow from the end of non-review sections while keeping Review intact when possible.
+      let extra=ordered.length-target;
+      for(const key of ['boss','transfer','social','science','english','reading','math']){
+        while(extra>0 && groups[key].length>1){groups[key].pop();extra--;}
+      }
+      while(extra>0 && groups.review.length){groups.review.pop();extra--;}
+      ordered=TRAINING_SECTIONS.flatMap(sec=>groups[sec.key]||[]);
+    }
 
-    state.session={date,mode:'daily',items:shuffled,index:0,answers:[],completed:false};save();return state.session;
+    state.session={date,mode:'daily',planVersion:SESSION_PLAN_VERSION,items:ordered,index:0,answers:[],completed:false};
+    save();return state.session;
   }
 
   function addStatic(items,bank,count,rng,preferredSkills){
@@ -208,14 +265,45 @@
     state.session={date,mode:'review',items:due.map(r=>({...r.question,_reviewId:r.id,_reviewStage:r.stage||0,level:'REVIEW'})),index:0,answers:[],completed:false};save();currentIndex=0;switchView('training');
   }
 
+  function sectionStats(session,key){
+    const indices=[];
+    (session?.items||[]).forEach((q,i)=>{if(sectionKeyForQuestion(q)===key)indices.push(i)});
+    const done=indices.filter(i=>session.answers?.[i]).length;
+    return {indices,done,total:indices.length};
+  }
+
+  function renderTrainingSectionTabs(){
+    const el=$('trainingSectionTabs');
+    const s=state.session;
+    if(!el)return;
+    if(!s || s.completed){el.innerHTML='';return}
+    const activeKey=sectionKeyForQuestion(s.items[currentIndex]);
+    el.innerHTML=TRAINING_SECTIONS.map(sec=>{
+      const st=sectionStats(s,sec.key);
+      const disabled=st.total===0;
+      return `<button class="training-section-tab ${sec.key===activeKey?'active':''} ${st.done===st.total&&st.total?'complete':''}" data-training-section="${sec.key}" ${disabled?'disabled':''}><span>${sec.icon}</span><strong>${sec.label}</strong><small>${st.done}/${st.total}</small></button>`;
+    }).join('');
+    el.querySelectorAll('[data-training-section]').forEach(btn=>btn.addEventListener('click',()=>jumpToTrainingSection(btn.dataset.trainingSection)));
+  }
+
+  function jumpToTrainingSection(key){
+    const s=state.session;if(!s||s.completed)return;
+    const st=sectionStats(s,key);if(!st.indices.length)return;
+    const next=st.indices.find(i=>!s.answers?.[i]);
+    currentIndex=next===undefined?st.indices[0]:next;
+    s.index=currentIndex;save();showCurrentQuestion();
+    $('questionStage')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
   function renderTraining(){
     const s=state.session;
     if(!s || s.completed){$('trainingEmpty').classList.remove('hidden');$('questionStage').classList.add('hidden');$('sessionComplete').classList.add('hidden');return}
     $('trainingEmpty').classList.add('hidden');$('questionStage').classList.remove('hidden');$('sessionComplete').classList.add('hidden');
     $('trainingTitle').textContent=s.mode==='review'?'Review Workout':'Today’s #22 Workout';
-    $('trainingSummary').textContent=s.mode==='review'?`${s.items.length} due review questions`:`${s.items.filter(x=>x.subject==='Math').length} Math · Reading · English · Science · Social Studies · Transfer Prep · Boss Challenge · Review`;
+    $('trainingSummary').textContent=s.mode==='review'?`${s.items.length} due review questions`:'Work in order, or tap a subject to jump there.';
     currentIndex=Math.min(s.index||0,s.items.length-1);
     updateSessionProgress();
+    renderTrainingSectionTabs();
     showCurrentQuestion();
   }
 
@@ -227,14 +315,17 @@
     $('qSubject').textContent=q.subject;
     $('qSkill').textContent=q.skill;
     $('qLevel').textContent=q.level||'CORE';
-    $('qCounter').textContent=`${currentIndex+1} / ${s.items.length}`;
+    const sec=TRAINING_SECTIONS.find(x=>x.key===sectionKeyForQuestion(q));
+    const secStats=sectionStats(s,sec?.key||sectionKeyForQuestion(q));
+    const secPos=secStats.indices.indexOf(currentIndex)+1;
+    $('qCounter').textContent=`${currentIndex+1} / ${s.items.length} · ${sec?.label||q.subject} ${secPos}/${secStats.total}`;
     $('qPrompt').textContent=q.prompt;
     $('qChoices').innerHTML='';
     (q.choices||[]).forEach((c,i)=>{
       const b=document.createElement('button');b.className='choice';b.innerHTML=`<span class="choice-key">${String.fromCharCode(65+i)}</span><span>${esc(c)}</span>`;b.addEventListener('click',()=>{if($('questionNav').classList.contains('hidden')){selectedChoice=i;document.querySelectorAll('.choice').forEach((x,j)=>x.classList.toggle('selected',j===i))}});$('qChoices').appendChild(b);
     });
     if(q.passage){$('passageBox').classList.remove('hidden');$('passageBox').innerHTML=`<strong>${esc(q.passageTitle||'Reading Passage')}</strong>\n\n${esc(q.passage)}`;} else $('passageBox').classList.add('hidden');
-    $('hintBox').classList.add('hidden');$('feedbackBox').className='feedback hidden';$('explanationBox').classList.add('hidden');$('questionNav').classList.add('hidden');$('submitAnswerBtn').disabled=false;updateSessionProgress();
+    $('hintBox').classList.add('hidden');$('feedbackBox').className='feedback hidden';$('explanationBox').classList.add('hidden');$('questionNav').classList.add('hidden');$('submitAnswerBtn').disabled=false;updateSessionProgress();renderTrainingSectionTabs();
   }
 
   function showHint(){const q=state.session?.items[currentIndex];if(!q)return;$('hintBox').textContent=q.hint||'Break the problem into smaller steps and use evidence from the question.';$('hintBox').classList.remove('hidden')}
@@ -247,7 +338,7 @@
     $('feedbackBox').textContent=correct?'✅ Correct — good read.':'❌ Not yet. Use the explanation, then this skill will come back in review.';
     $('feedbackBox').className='feedback '+(correct?'correct':'incorrect');
     $('explanationBox').innerHTML=`<strong>WHY:</strong> ${esc(q.explanation)}<br><strong>SKILL:</strong> ${esc(q.skill)}${q.origin?`<br><strong>TRACK:</strong> ${esc(q.origin)}`:''}`;$('explanationBox').classList.remove('hidden');$('questionNav').classList.remove('hidden');$('submitAnswerBtn').disabled=true;
-    recordAttempt(q,correct);s.answers[currentIndex]={correct,selected:selectedChoice};save();updateSessionProgress();
+    recordAttempt(q,correct);s.answers[currentIndex]={correct,selected:selectedChoice};save();updateSessionProgress();renderTrainingSectionTabs();
   }
 
   function recordAttempt(q,correct){

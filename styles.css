@@ -72,3 +72,16 @@ footer{display:flex;justify-content:space-around;gap:12px;flex-wrap:wrap;padding
 .erb-priority-note{margin-top:12px;padding:12px 14px;border-radius:14px;background:#eef7ff;border:1px solid #c8e5fa;color:var(--navy2);font-size:13px;line-height:1.5}
 @media(max-width:900px){.erb-score-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.erb-score-grid{grid-template-columns:1fr}.erb-score{min-height:0}}
+
+/* V3.2 clickable Daily Training subject navigation */
+.training-instruction{margin:6px 0 10px;color:var(--muted);font-size:13px}
+.training-section-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.training-section-tab{appearance:none;border:1px solid #d7e4ed;background:#f5f9fc;color:var(--navy2);border-radius:999px;padding:8px 11px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font:inherit;transition:.16s ease;box-shadow:none}
+.training-section-tab strong{font-size:12px;line-height:1}
+.training-section-tab small{font-size:10px;color:var(--muted);font-weight:900;background:#fff;padding:3px 6px;border-radius:999px}
+.training-section-tab:hover:not(:disabled){transform:translateY(-1px);border-color:#8fc9ee;background:#edf8ff}
+.training-section-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.training-section-tab.active small{color:var(--navy);background:#fff}
+.training-section-tab.complete:not(.active){border-color:#9edcc8;background:#ecfbf4;color:#176b47}
+.training-section-tab:disabled{opacity:.42;cursor:not-allowed}
+@media(max-width:600px){.training-section-tabs{gap:6px}.training-section-tab{padding:7px 9px}.training-section-tab strong{font-size:11px}}
