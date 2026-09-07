@@ -11,7 +11,7 @@
     {name:'Mathematics',scale:558,nn:59,inorm:29,focus:'Concepts · application · computation · word problems'}
   ];
   const STORE_KEY='audrey22_learning_os_v3';
-  const APP_VERSION='3.0';
+  const APP_VERSION='3.1';
   const todayKey=()=>new Date().toISOString().slice(0,10);
   const addDays=(dateStr,n)=>{const d=new Date(dateStr+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -71,7 +71,10 @@
     window.scrollTo({top:0,behavior:'smooth'});
   }
 
-  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchView(t.dataset.view)));
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    if(t.dataset.view==='training') startDaily(false);
+    else switchView(t.dataset.view);
+  }));
   document.querySelectorAll('[data-jump]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.jump)));
   $('quickStartBtn').addEventListener('click',()=>startDaily());
   $('heroStartBtn').addEventListener('click',()=>startDaily());
@@ -192,14 +195,17 @@
   }
 
   function startDaily(forceNew=false){
-    currentSessionMode='daily'; buildDailySession(forceNew); currentIndex=state.session.index||0; switchView('training'); showCurrentQuestion();
+    currentSessionMode='daily';
+    buildDailySession(forceNew);
+    currentIndex=state.session.index||0;
+    switchView('training');
   }
 
   function startReviews(){
     const date=todayKey();const due=state.reviewQueue.filter(r=>r.due<=date);
     if(!due.length){alert('No reviews are due right now. Nice work. 🏆');return}
     currentSessionMode='review';
-    state.session={date,mode:'review',items:due.map(r=>({...r.question,_reviewId:r.id,_reviewStage:r.stage||0,level:'REVIEW'})),index:0,answers:[],completed:false};save();currentIndex=0;switchView('training');showCurrentQuestion();
+    state.session={date,mode:'review',items:due.map(r=>({...r.question,_reviewId:r.id,_reviewStage:r.stage||0,level:'REVIEW'})),index:0,answers:[],completed:false};save();currentIndex=0;switchView('training');
   }
 
   function renderTraining(){
@@ -208,7 +214,9 @@
     $('trainingEmpty').classList.add('hidden');$('questionStage').classList.remove('hidden');$('sessionComplete').classList.add('hidden');
     $('trainingTitle').textContent=s.mode==='review'?'Review Workout':'Today’s #22 Workout';
     $('trainingSummary').textContent=s.mode==='review'?`${s.items.length} due review questions`:`${s.items.filter(x=>x.subject==='Math').length} Math · Reading · English · Science · Social Studies · Transfer Prep · Boss Challenge · Review`;
-    currentIndex=Math.min(s.index||0,s.items.length-1); updateSessionProgress();
+    currentIndex=Math.min(s.index||0,s.items.length-1);
+    updateSessionProgress();
+    showCurrentQuestion();
   }
 
   function showCurrentQuestion(){

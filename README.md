@@ -1,4 +1,4 @@
-# Audrey #22 Learning OS — V3
+# Audrey #22 Learning OS — V3.1
 
 A static web app for Audrey's daily Grade 7 mastery training. V3 is **automatic by default**: it does not require parent-entered school topics to generate useful daily practice.
 
@@ -21,3 +21,9 @@ The app does **not** copy proprietary question banks from ERB, NoRedInk, Khan Ac
 ## GitHub Pages
 
 Upload all files in this folder to the root of the existing `audrey22-learning-os` repository. Keep the same GitHub Pages URL.
+
+
+## V3.1 hotfix
+- Fixed Daily Training tab so it creates/resumes today's workout and immediately renders the current question.
+- Training view now always renders the active question instead of only drawing the session shell.
+- Updated service worker caching so GitHub Pages updates activate more reliably.
