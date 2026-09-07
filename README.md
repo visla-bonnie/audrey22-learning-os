@@ -1,8 +1,17 @@
-# Audrey #22 Learning OS — V1
+# Audrey #22 Learning OS — V2
 
 A static web app for daily Grade 7 learning practice, review, skill tracking, and school milestone awareness.
 
 ## What is included
+
+### New in V2
+
+- Personalized ERB baseline from Audrey's Spring 2026 Grade 6 CTP report.
+- Dashboard shows National Norm (NN) and Independent School Norm (IN) for all reported subtests.
+- Daily practice automatically gives extra weight to lower ERB areas: Verbal Reasoning, Writing Concepts & Skills, Quantitative Reasoning, Mathematics, Reading Comprehension, and Writing Mechanics.
+- New original ERB-style drills for verbal reasoning, writing concepts/skills, writing mechanics, and quantitative reasoning.
+- Vocabulary remains in maintenance mode because it is Audrey's strongest ERB area on this report.
+
 
 - Daily balanced practice across Math, Reading, English, Science, Social Studies, and Reasoning.
 - Dynamic Math generator covering Grade 7 foundations, placement-style skills, and advanced topics (functions, systems, exponents/polynomials, quadratics).
@@ -38,7 +47,7 @@ Then open `http://localhost:8000`.
 5. Select `main` and `/ (root)`, then Save.
 6. GitHub will provide the public Pages URL.
 
-## Important V1 design choice
+## Important V2 design choice
 
 This version has no cloud backend or AI API. That makes it easy to host, private, and inexpensive. The parent enters current school/tutor topics manually; the local training engine changes the daily mix using those inputs.
 

@@ -3,10 +3,10 @@
 
   const SKILLS = {
     Math:[
-      'Fractions & Decimals','Percent','Ratios & Proportions','Integers','Expressions','Equations','Inequalities','Geometry','Statistics','Probability','Word Problems','Functions','Systems of Equations','Exponents & Polynomials','Quadratics'
+      'Fractions & Decimals','Percent','Ratios & Proportions','Integers','Expressions','Equations','Inequalities','Geometry','Statistics','Probability','Word Problems','Quantitative Reasoning','Functions','Systems of Equations','Exponents & Polynomials','Quadratics'
     ],
     English:[
-      'Grammar','Sentence Structure','Punctuation','Vocabulary in Context','Main Idea','Inference','Evidence','Author’s Purpose','Writing Logic'
+      'Grammar','Sentence Structure','Punctuation','Vocabulary in Context','Writing Mechanics','Verbal Reasoning','Writing Concepts & Skills','Main Idea','Inference','Evidence','Author’s Purpose','Writing Logic'
     ],
     Science:[
       'Experimental Design','Cells & Genetics','Ecosystems','Matter','Forces & Motion','Energy','Earth Systems','Space Science','Data & Graphs'
@@ -107,7 +107,74 @@
     ],1,'The revision is concise and keeps both ideas without repeating “the test.”','Look for the clearest, least repetitive version.'),
     Q('e30','English','Writing Logic','CORE','Which statement is a claim rather than a fact?',[
       'Water freezes at 0°C under standard conditions.','California is on the west coast of the United States.','School uniforms improve student focus.','Earth has one moon.'
-    ],2,'“School uniforms improve student focus” is arguable and would need evidence, so it is a claim.','A claim is something reasonable people could debate.'),
+    ],2,'“School uniforms improve student focus” is arguable and would need evidence, so it is a claim.','A claim is something reasonable people could debate.'),,
+
+    Q('erb_vr1','English','Verbal Reasoning','ERB PRIORITY','Which pair has the same relationship as BIRD : NEST?',[
+      'bee : hive','book : page','shoe : foot','river : water'
+    ],0,'A bird lives in a nest; a bee lives in a hive. The relationship is animal to home.','Name the relationship in words before choosing.'),
+    Q('erb_vr2','English','Verbal Reasoning','ERB PRIORITY','Which word does NOT belong with the others?',[
+      'triangle','rectangle','circle','equation'
+    ],3,'Triangle, rectangle, and circle are geometric figures; equation is a mathematical statement.','Find the shared category.'),
+    Q('erb_vr3','English','Verbal Reasoning','ERB PRIORITY','All kestrels are birds. Some birds migrate. Which conclusion MUST be true?',[
+      'All kestrels migrate.','Some kestrels migrate.','Kestrels are birds.','No kestrels migrate.'
+    ],2,'The only guaranteed conclusion is the statement already given: all kestrels are birds. The migration information does not tell us whether kestrels migrate.','Separate what must be true from what might be true.'),
+    Q('erb_vr4','English','Verbal Reasoning','ERB PRIORITY','COMPASS is to DIRECTION as THERMOMETER is to:',[
+      'weather','temperature','glass','distance'
+    ],1,'A compass measures or indicates direction; a thermometer measures temperature.','Ask what each tool tells you.'),
+    Q('erb_vr5','English','Verbal Reasoning','ERB PRIORITY','If every member of Team A completed the challenge, and Audrey is a member of Team A, what follows?',[
+      'Audrey probably completed it.','Audrey completed it.','Audrey designed the challenge.','No conclusion is possible.'
+    ],1,'This is deductive reasoning: the rule applies to every member, and Audrey is a member, so she completed it.','Apply the general rule to the specific case.'),
+    Q('erb_vr6','English','Verbal Reasoning','ERB PRIORITY','Which word best completes the relationship? GENEROUS : SELFISH :: CAUTIOUS : ___',[
+      'careful','reckless','quiet','patient'
+    ],1,'Generous and selfish are opposites; cautious and reckless are also opposites.','Look for the same kind of relationship.'),
+    Q('erb_vr7','English','Verbal Reasoning','ERB PRIORITY','Three clues describe one word: “can be supported by evidence,” “can be tested,” “may be revised.” Which word fits best?',[
+      'hypothesis','rumor','decoration','tradition'
+    ],0,'A hypothesis can be tested with evidence and revised when new evidence appears.','Think of a claim used in scientific reasoning.'),
+    Q('erb_vr8','English','Verbal Reasoning','ERB PRIORITY','Which statement best completes the logic? If the library is open, the lights are on. The lights are NOT on. Therefore:',[
+      'the library is not open','the library is definitely crowded','the lights are broken','nothing can be concluded'
+    ],0,'If open → lights on. Since the lights are not on, the condition for being open is not met.','Use the contrapositive of the rule.'),
+    Q('erb_wm1','English','Writing Mechanics','ERB BUILD','Which sentence is written correctly?',[
+      'After the game we ate, dinner.','After the game, we ate dinner.','After, the game we ate dinner.','After the game we, ate dinner.'
+    ],1,'An introductory phrase is followed by a comma; no comma belongs between the verb and its object.','Find the introductory phrase.'),
+    Q('erb_wm2','English','Writing Mechanics','ERB BUILD','Choose the sentence with correct capitalization.',[
+      'We visited yosemite national park in July.','We visited Yosemite National Park in July.','We visited Yosemite national park in july.','We visited yosemite National Park in July.'
+    ],1,'The official place name and the month are proper nouns and should be capitalized.','Look for names of specific places and months.'),
+    Q('erb_wm3','English','Writing Mechanics','ERB BUILD','Which sentence avoids a pronoun-agreement error?',[
+      'Every player should bring their water bottle to this one-student drill.','Each of the two teams should bring its roster.','Neither student finished their individual form.','A person should bring our notebook.'
+    ],1,'“Each ... team” is singular, so “its” agrees clearly.','Match the pronoun to the noun it replaces.'),
+    Q('erb_wm4','English','Writing Mechanics','ERB BUILD','Which sentence uses the apostrophe correctly?',[
+      'The three players helmets were lined up.','The three player’s helmets were lined up.','The three players’ helmets were lined up.','The three players helmet’s were lined up.'
+    ],2,'The helmets belong to multiple players, so the plural possessive is players’.','Make the owner plural first, then add the possessive apostrophe.'),
+    Q('erb_wm5','English','Writing Mechanics','ERB BUILD','Which revision fixes the sentence fragment? “Although the team practiced for two hours.”',[
+      'Although the team practiced for two hours.','The team practiced for two hours.','Although, the team practiced for two hours.','Practiced for two hours.'
+    ],1,'“Although” makes the original clause dependent. Removing it creates a complete independent clause.','Can the sentence stand alone?'),
+    Q('erb_wm6','English','Writing Mechanics','ERB BUILD','Which sentence uses commas correctly with a nonessential phrase?',[
+      'My coach who grew up in France speaks three languages.','My coach, who grew up in France, speaks three languages.','My coach who grew up, in France speaks three languages.','My coach, who grew up in France speaks, three languages.'
+    ],1,'The phrase “who grew up in France” adds nonessential information and should be set off with commas.','Can the sentence still identify the coach without the phrase?'),
+    Q('erb_wc1','English','Writing Concepts & Skills','ERB PRIORITY','Which sentence is the strongest thesis for an essay about whether schools should offer more outdoor learning?',[
+      'Outdoor learning exists.','Schools should offer more outdoor learning because it can deepen observation, improve engagement, and connect lessons to real environments.','I once had class outside.','Some days are sunny.'
+    ],1,'A strong thesis states a clear position and previews the main reasons the essay will develop.','Choose the sentence that can guide an entire essay.'),
+    Q('erb_wc2','English','Writing Concepts & Skills','ERB PRIORITY','A paragraph argues that school gardens help science learning. Which detail is MOST relevant?',[
+      'The garden fence is green.','Students measured soil moisture, tracked plant growth, and compared the results with their hypotheses.','The cafeteria serves lunch at noon.','Some students prefer basketball.'
+    ],1,'This detail directly shows students doing scientific observation, measurement, and hypothesis testing in the garden.','Pick evidence that directly supports the paragraph’s claim.'),
+    Q('erb_wc3','English','Writing Concepts & Skills','ERB PRIORITY','Which order is most logical for an explanatory paragraph?',[
+      'conclusion → random detail → topic sentence','topic sentence → supporting evidence → explanation → concluding sentence','supporting evidence → title → unrelated example','quotation → new topic → topic sentence'
+    ],1,'Effective explanatory writing usually introduces the idea, supports it, explains the support, then closes the point.','Think beginning, proof, reasoning, finish.'),
+    Q('erb_wc4','English','Writing Concepts & Skills','ERB PRIORITY','Which transition best signals contrast?',[
+      'for example','therefore','however','similarly'
+    ],2,'“However” signals a contrast between ideas.','Ask whether the writer is adding, causing, comparing, or contrasting.'),
+    Q('erb_wc5','English','Writing Concepts & Skills','ERB PRIORITY','Which sentence best fits a formal report for a science teacher?',[
+      'The experiment was super cool and kinda weird.','The results were awesome!','The second trial produced a 12% increase in growth compared with the control group.','You won’t believe what happened next.'
+    ],2,'Formal academic writing uses precise, objective language and relevant data.','Match tone and word choice to audience and purpose.'),
+    Q('erb_wc6','English','Writing Concepts & Skills','ERB PRIORITY','Which revision is most concise without losing meaning? “Due to the fact that it was raining, the game was moved indoors.”',[
+      'Because it was raining, the game was moved indoors.','It was raining due to the fact, and the game was moved indoors.','The game, because of rain that was happening, moved indoors.','Due to rain being a thing, indoors was chosen.'
+    ],0,'“Because it was raining” communicates the same idea more directly and efficiently.','Remove unnecessary words while preserving meaning.'),
+    Q('erb_wc7','English','Writing Concepts & Skills','ERB PRIORITY','A writer wants to persuade students to reduce food waste. Which opening is most effective?',[
+      'Food is a noun.','Our cafeteria throws away dozens of untouched items each day; small changes in what we take can cut that waste.','Lunch happens every day.','Some plates are round.'
+    ],1,'The opening gives a concrete problem and immediately points toward a meaningful action, fitting a persuasive purpose.','Choose an opening aligned to purpose and audience.'),
+    Q('erb_wc8','English','Writing Concepts & Skills','ERB PRIORITY','Which sentence best explains HOW the evidence supports the claim? Claim: “Short movement breaks can help students refocus.” Evidence: “Students made fewer attention errors after a five-minute walk.”',[
+      'The walk was five minutes.','This result suggests that brief movement can reset attention, because students made fewer mistakes afterward.','Students sometimes walk.','Errors can happen in school.'
+    ],1,'The sentence connects the evidence to the claim by explaining the meaning of the lower error rate.','Do not repeat the evidence; explain why it matters.')
   ];
 
   const science = [
@@ -535,6 +602,36 @@
         wrongs=[rate*(hours+extra),rate+hours+extra,rate*hours];
         explanation=`Hourly pay is ${rate}×${hours}=$${rate*hours}. Add the $${extra} bonus for $${correct}.`;
         hint='Separate hourly earnings from the bonus.';break;
+      }
+      case 'Quantitative Reasoning':{
+        const type=ri(rng,0,3);
+        if(type===0){
+          const a=ri(rng,2,9), b=ri(rng,2,9), c=ri(rng,2,9); correct=a*c>b*c?'Quantity A':'Quantity B';
+          if(a===b) correct='Equal';
+          prompt=`Compare the quantities. Quantity A: ${a} × ${c}. Quantity B: ${b} × ${c}.`;
+          wrongs=['Quantity A','Quantity B','Equal'].filter(x=>x!==correct);
+          explanation=`Both quantities are multiplied by the same positive number ${c}, so compare ${a} and ${b}. The correct relationship is ${correct}.`;
+          hint='When the same positive factor multiplies both quantities, compare the original numbers.';
+        }else if(type===1){
+          const start=ri(rng,1,5), step=ri(rng,2,6); correct=start+step*4;
+          prompt=`Find the next term: ${[0,1,2,3].map(i=>start+step*i).join(', ')}, __`;
+          wrongs=[correct-step+1,correct+step,correct*2];
+          explanation=`The pattern adds ${step} each time, so the next term is ${correct}.`;
+          hint='Look at the difference between consecutive terms.';
+        }else if(type===2){
+          const total=pick(rng,[20,40,50,80,100]), pct=pick(rng,[10,20,25,40,50]); correct=total*pct/100;
+          prompt=`Without a calculator, determine ${pct}% of ${total}.`;
+          wrongs=[total+pct,total-pct,pct/100];
+          explanation=`${pct}% = ${pct}/100. Multiply by ${total}: ${correct}.`;
+          hint='Rewrite the percent as a fraction or decimal.';
+        }else{
+          const vals=[4,6,8,10]; const add=ri(rng,2,8); correct='The mean increases by '+add;
+          prompt=`Every value in the data set 4, 6, 8, 10 is increased by ${add}. What happens to the mean?`;
+          wrongs=['The mean stays the same','The mean doubles','The mean decreases by '+add];
+          explanation=`Adding the same number to every data value increases the mean by that same number, ${add}.`;
+          hint='Imagine computing the old mean and the new mean.';
+        }
+        break;
       }
       case 'Functions':{
         const m=ri(rng,2,6), b=ri(rng,-5,8), x=ri(rng,-3,7); correct=m*x+b;

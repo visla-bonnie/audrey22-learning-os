@@ -1,6 +1,15 @@
 (function(){
   'use strict';
   const BANK=window.A22_BANK;
+  const ERB_BASELINE=[
+    {name:'Verbal Reasoning',scale:559,nn:51,inorm:18,focus:'Word relationships · logic · inference'},
+    {name:'Vocabulary',scale:639,nn:91,inorm:48,focus:'Maintain strong vocabulary + context clues'},
+    {name:'Reading Comprehension',scale:596,nn:66,inorm:33,focus:'Main idea · inference · evidence · nonfiction'},
+    {name:'Writing Mechanics',scale:612,nn:82,inorm:39,focus:'Grammar · punctuation · capitalization · usage'},
+    {name:'Writing Concepts & Skills',scale:570,nn:63,inorm:22,focus:'Organization · purpose · support · style'},
+    {name:'Quantitative Reasoning',scale:551,nn:57,inorm:22,focus:'Patterns · comparisons · generalization · data reasoning'},
+    {name:'Mathematics',scale:558,nn:59,inorm:29,focus:'Concepts · application · computation · word problems'}
+  ];
   const STORE_KEY='audrey22_learning_os_v1';
   const todayKey=()=>new Date().toISOString().slice(0,10);
   const addDays=(dateStr,n)=>{const d=new Date(dateStr+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
@@ -71,7 +80,7 @@
       [['ratio','proportion','比例'],'Ratios & Proportions'],[['percent','percentage','百分'],'Percent'],[['fraction','decimal','分数','小数'],'Fractions & Decimals'],
       [['integer','negative','整数','负数'],'Integers'],[['expression','表达式'],'Expressions'],[['equation','linear equation','方程'],'Equations'],[['inequal','不等式'],'Inequalities'],
       [['geometry','angle','area','triangle','circle','几何'],'Geometry'],[['statistic','mean','median','data','统计'],'Statistics'],[['probab','概率'],'Probability'],
-      [['word problem','应用题'],'Word Problems'],[['function','函数'],'Functions'],[['system','联立'],'Systems of Equations'],[['exponent','polynomial','指数','多项式'],'Exponents & Polynomials'],[['quad','quadratic','二次'],'Quadratics']
+      [['word problem','应用题'],'Word Problems'],[['quantitative reasoning','quant reasoning','数量推理'],'Quantitative Reasoning'],[['function','函数'],'Functions'],[['system','联立'],'Systems of Equations'],[['exponent','polynomial','指数','多项式'],'Exponents & Polynomials'],[['quad','quadratic','二次'],'Quadratics']
     ];
     map.forEach(([keys,skill])=>{if(keys.some(k=>t.includes(k)))out.push(skill)});
     return out;
@@ -79,11 +88,21 @@
   function inferStaticSkills(text,subject){
     const t=(text||'').toLowerCase(); const out=[];
     const maps={
-      English:[[['grammar','语法'],'Grammar'],[['sentence','句子'],'Sentence Structure'],[['punct','标点'],'Punctuation'],[['vocab','词汇'],'Vocabulary in Context'],[['inference','推断'],'Inference'],[['evidence','证据'],'Evidence'],[['main idea','主旨'],'Main Idea'],[['author','purpose','作者'],'Author’s Purpose'],[['writing','essay','写作'],'Writing Logic']],
+      English:[[['grammar','语法'],'Grammar'],[['sentence','句子'],'Sentence Structure'],[['punct','标点'],'Punctuation'],[['vocab','词汇'],'Vocabulary in Context'],[['inference','推断'],'Inference'],[['evidence','证据'],'Evidence'],[['main idea','主旨'],'Main Idea'],[['author','purpose','作者'],'Author’s Purpose'],[['writing mechanics','mechanics'],'Writing Mechanics'],[['verbal reasoning','word relationship','deductive','inductive'],'Verbal Reasoning'],[['writing concepts','organization','audience','supporting details'],'Writing Concepts & Skills'],[['writing','essay','写作'],'Writing Logic']],
       Science:[[['experiment','variable','实验'],'Experimental Design'],[['cell','genetic','细胞','遗传'],'Cells & Genetics'],[['ecosystem','生态'],'Ecosystems'],[['matter','atom','物质'],'Matter'],[['force','motion','力','运动'],'Forces & Motion'],[['energy','能量'],'Energy'],[['earth','plate','climate','地球'],'Earth Systems'],[['space','moon','planet','太空'],'Space Science'],[['graph','data','图表'],'Data & Graphs']],
       'Social Studies':[[['source','primary','secondary','史料'],'Primary & Secondary Sources'],[['cause','effect','因果'],'Cause & Effect'],[['geography','map','地理'],'Geography'],[['civic','government','政府'],'Civics'],[['ancient','civilization','古代'],'Ancient Civilizations'],[['u.s.','american','美国史'],'U.S. History'],[['econom','经济'],'Economics'],[['reason','bias','perspective','历史推理'],'Historical Reasoning']]
     };
     (maps[subject]||[]).forEach(([keys,skill])=>{if(keys.some(k=>t.includes(k)))out.push(skill)});return out;
+  }
+
+  function erbTier(inorm){
+    if(inorm<30)return {cls:'erb-priority',label:'PRIORITY'};
+    if(inorm<40)return {cls:'erb-build',label:'BUILD'};
+    return {cls:'erb-maintain',label:'MAINTAIN'};
+  }
+  function renderErbGrid(id){
+    const el=$(id);if(!el)return;
+    el.innerHTML=ERB_BASELINE.map(x=>{const t=erbTier(x.inorm);return `<div class="erb-score ${t.cls}"><div class="erb-score-top"><strong>${esc(x.name)}</strong><span>${t.label}</span></div><div class="erb-numbers"><b>IN ${x.inorm}</b><small>NN ${x.nn} · Scale ${x.scale}</small></div><p>${esc(x.focus)}</p></div>`}).join('');
   }
 
   function buildDailySession(forceNew=false){
@@ -109,13 +128,15 @@
     const advanced=inferMathSkills(state.parent.advancedMath);
     const foundation=['Fractions & Decimals','Percent','Ratios & Proportions','Integers','Equations','Word Problems','Geometry','Statistics','Probability'];
     const placement=['Ratios & Proportions','Percent','Equations','Word Problems','Geometry','Statistics','Probability','Inequalities'];
+    const erbMath=['Quantitative Reasoning','Word Problems','Ratios & Proportions','Percent','Statistics','Geometry'];
     const advDefault=['Functions','Systems of Equations','Exponents & Polynomials','Quadratics'];
     let mathSkills=[];
     const intensity=state.parent.mathIntensity;
     for(let i=0;i<mathCount;i++){
       let pool,level='CORE';
-      if(i<Math.ceil(mathCount*.35) && schoolMath.length){pool=schoolMath;level='SCHOOL'}
-      else if((intensity==='advanced' && i>=Math.ceil(mathCount*.45)) || (intensity==='balanced' && i>=Math.ceil(mathCount*.7))){pool=advanced.length?advanced:advDefault;level='ADVANCED'}
+      if(i<Math.ceil(mathCount*.30) && schoolMath.length){pool=schoolMath;level='SCHOOL'}
+      else if(i===Math.ceil(mathCount*.30) || i===Math.ceil(mathCount*.30)+1){pool=erbMath;level='ERB PRIORITY'}
+      else if((intensity==='advanced' && i>=Math.ceil(mathCount*.55)) || (intensity==='balanced' && i>=Math.ceil(mathCount*.78))){pool=advanced.length?advanced:advDefault;level='ADVANCED'}
       else if(i%3===1){pool=placement;level='PLACEMENT'}
       else pool=foundation;
       const skill=choice(pool,rng); mathSkills.push(skill); items.push(BANK.mathQuestion(skill,rng,level));
@@ -125,7 +146,9 @@
     const set=choice(BANK.readingSets,rng);
     BANK.reading.filter(q=>q.readingSet===set.id).slice(0,readingCount).forEach(q=>items.push({...q}));
 
-    addStatic(items,BANK.english,englishCount,rng,inferStaticSkills(state.parent.schoolEnglish,'English'));
+    const englishSchool=inferStaticSkills(state.parent.schoolEnglish,'English');
+    const erbEnglish=['Verbal Reasoning','Writing Concepts & Skills','Writing Mechanics'];
+    addStatic(items,BANK.english,englishCount,rng,unique([...englishSchool,...erbEnglish]));
     addStatic(items,BANK.science,scienceCount,rng,inferStaticSkills(state.parent.schoolScience,'Science'));
     addStatic(items,BANK.social,socialCount,rng,inferStaticSkills(state.parent.schoolHistory,'Social Studies'));
     addStatic(items,BANK.reasoning,reasoningCount,rng,[]);
@@ -258,6 +281,7 @@
     const mastery=masteryPercent();$('milestoneMeter').style.width=Math.max(15,Math.min(95,mastery))+'%';
     const subjects=[['Math','🧮'],['English','📚'],['Science','🔬'],['Social Studies','🌎'],['Reasoning','🧠']];
     $('weeklySubjectCards').innerHTML=subjects.map(([sub,icon])=>{const st=statsFor(sub);return `<div class="subject-card"><span>${icon} ${sub}</span><strong>${st.pct===null?'—':st.pct+'%'}</strong><small>${st.total?`${st.correct}/${st.total} correct this week`:'No attempts yet'}</small></div>`}).join('');
+    renderErbGrid('erbScoreGrid');
     const ranked=rankSkills();
     $('needsAttention').innerHTML=(ranked.filter(x=>x.total>=2).slice(0,4).map(x=>`<div class="list-item"><strong>${esc(x.skill)}</strong><span>${x.pct}% · ${x.total} attempts</span></div>`).join('')||'<div class="subtle">Complete a few workouts and weak spots will appear here.</div>');
     $('recentWins').innerHTML=(ranked.slice().reverse().filter(x=>x.total>=2).slice(0,4).map(x=>`<div class="list-item"><strong>${esc(x.skill)}</strong><span>${x.pct}% · ${statusFor(x.total,x.pct).label}</span></div>`).join('')||'<div class="subtle">Your wins will show up after practice.</div>');
@@ -280,7 +304,7 @@
   }
 
   const roadmapData=[
-    ['7th Grade','BUILD & PROVE',['Excel in current courses','Strengthen math foundations + placement readiness','Build strong English reading/writing','Track ERB / benchmark results','Know 8th-grade placement rules','Keep sports, health, and interests strong']],
+    ['7th Grade','BUILD & PROVE',['Excel in current courses','Strengthen math foundations + placement readiness','Build strong English reading/writing','Raise ERB priority areas: verbal reasoning, writing concepts, quantitative reasoning, math','Know 8th-grade placement rules','Keep sports, health, and interests strong']],
     ['8th Grade','LEVEL UP',['Enter the strongest appropriate math path','Strengthen analytical writing','Confirm 9th-grade course placement rules','Prepare for high-school study habits','Develop leadership and meaningful activities','Use summer strategically']],
     ['9th Grade','HIGH SCHOOL BEGINS',['Protect GPA from day one','Choose rigorous but sustainable courses','Build 2–4 meaningful long-term activities','Develop strong teacher relationships','Explore interests without résumé stuffing','Plan summer growth']],
     ['10th Grade','EXPLORE & BUILD',['Keep GPA strong','Add Honors/AP when ready','Take PSAT baseline','Deepen extracurricular impact','Explore possible majors/careers','Plan meaningful summer work']],
@@ -294,9 +318,10 @@
   }
 
   const placementItems=[
-    'Get Audrey’s 6th-grade placement assessment/results','Get ERB math subsection results','Confirm exact 7th-grade math pathway names','Understand why Standard placement was chosen','Confirm 7→8 placement decision window','Ask whether another placement assessment occurs','Ask whether students can move up midyear or for 8th grade','Confirm teacher recommendation criteria','Confirm how ERB and class grades are used','Ask what evidence demonstrates readiness for a higher path','Confirm all 8th-grade math options','Understand 8→9 math placement before 8th grade begins','Check whether English has level/placement decisions','Check world-language placement/prerequisites'
+    'Get Audrey’s 6th-grade placement assessment/results','Get detailed ERB content-strand/subscore report if available','Use Spring 2026 ERB baseline in training plan','Confirm exact 7th-grade math pathway names','Understand why Standard placement was chosen','Confirm 7→8 placement decision window','Ask whether another placement assessment occurs','Ask whether students can move up midyear or for 8th grade','Confirm teacher recommendation criteria','Confirm how ERB and class grades are used','Ask what evidence demonstrates readiness for a higher path','Confirm all 8th-grade math options','Understand 8→9 math placement before 8th grade begins','Check whether English has level/placement decisions','Check world-language placement/prerequisites'
   ];
   function renderParent(){
+    renderErbGrid('parentErbScoreGrid');
     const p=state.parent;$('schoolMathInput').value=p.schoolMath;$('schoolEnglishInput').value=p.schoolEnglish;$('schoolScienceInput').value=p.schoolScience;$('schoolHistoryInput').value=p.schoolHistory;$('schoolNotesInput').value=p.schoolNotes;$('advancedMathInput').value=p.advancedMath;$('advancedOtherInput').value=p.advancedOther;$('milestoneInput').value=p.milestone;$('milestoneDateInput').value=p.milestoneDate;$('milestoneNotesInput').value=p.milestoneNotes;$('dailyTargetInput').value=p.dailyTarget;$('mathIntensityInput').value=p.mathIntensity;
     $('placementChecklist').innerHTML=placementItems.map((x,i)=>`<label class="check-row"><input type="checkbox" data-placement="${i}" ${p.placementChecks[i]?'checked':''}><span>${esc(x)}</span></label>`).join('');
     document.querySelectorAll('[data-placement]').forEach(cb=>cb.addEventListener('change',()=>{state.parent.placementChecks[cb.dataset.placement]=cb.checked;save()}));
