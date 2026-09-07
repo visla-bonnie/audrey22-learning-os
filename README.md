@@ -1,4 +1,4 @@
-# Audrey #22 Learning OS — V3.3
+# Audrey #22 Learning OS — V3.4
 
 A static web app for Audrey's daily Grade 7 mastery training. V3 is **automatic by default**: it does not require parent-entered school topics to generate useful daily practice.
 
@@ -42,3 +42,14 @@ Upload all files in this folder to the root of the existing `audrey22-learning-o
 - Clicking Math/Reading/English/etc. jumps directly to that subject's next unanswered question.
 - Daily session order is Math → Reading → English → Science → Social Studies → Transfer Prep → Boss Challenge → Review.
 - Old service-worker caching is retired to prevent stale GitHub Pages versions after uploads.
+
+
+## V3.4 — Fresh 25 + Mistake Book
+
+- Daily Training is fixed at **25 fresh questions**: 8 Math, 4 Reading, 4 English, 3 Science, 3 Social Studies, 2 Transfer Prep, and 1 Boss Challenge.
+- No duplicate question appears inside the same daily set.
+- Exact static questions and reading passages are rotated away for the previous 7 days whenever the bank allows; dynamic math also blocks recent exact prompts.
+- **Mistake review is separate from the fresh 25**, so deliberate repetition never steals a new-practice slot.
+- Every wrong answer is saved permanently in **Audrey #22 Mistake Book** with the last wrong answer, correct answer, explanation, miss count, and mastery status.
+- `Practice Active Mistakes` lets Audrey deliberately repeat unresolved mistakes; `Start Due Reviews` keeps the 1/3/7/14/30-day spaced-review schedule.
+- Existing V3 progress and Parent Radar data are preserved.

@@ -11,8 +11,8 @@
     {name:'Mathematics',scale:558,nn:59,inorm:29,focus:'Concepts · application · computation · word problems'}
   ];
   const STORE_KEY='audrey22_learning_os_v3';
-  const APP_VERSION='3.3';
-  const SESSION_PLAN_VERSION='ordered-clickable-subject-tabs-v2';
+  const APP_VERSION='3.4';
+  const SESSION_PLAN_VERSION='fresh-25-plus-mistake-book-v1';
   const TRAINING_SECTIONS=[
     {key:'math',label:'Math',icon:'🧮'},
     {key:'reading',label:'Reading',icon:'📖'},
@@ -20,17 +20,19 @@
     {key:'science',label:'Science',icon:'🔬'},
     {key:'social',label:'Social Studies',icon:'🌎'},
     {key:'transfer',label:'Transfer Prep',icon:'🎓'},
-    {key:'boss',label:'Boss Challenge',icon:'🧠'},
-    {key:'review',label:'Review',icon:'🔁'}
+    {key:'boss',label:'Boss Challenge',icon:'🧠'}
   ];
+  const REVIEW_SECTION={key:'review',label:'Review',icon:'🔁'};
+  const DAILY_FRESH_TARGET=25;
+  const RECENT_FRESH_DAYS=7;
   const todayKey=()=>new Date().toISOString().slice(0,10);
   const addDays=(dateStr,n)=>{const d=new Date(dateStr+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const $=id=>document.getElementById(id);
   const defaultState=()=>({
     xp:0,streak:0,lastCompletedDate:null,
-    history:[], attempts:{}, reviewQueue:[],
-    session:null,
+    history:[], attempts:{}, reviewQueue:[], mistakeBook:[], dailyFreshArchive:{},
+    session:null,dailySession:null,
     parent:{
       schoolMath:'',schoolEnglish:'',schoolScience:'',schoolHistory:'',schoolNotes:'',
       advancedMath:'',advancedOther:'',
@@ -63,9 +65,45 @@
   function validQuestion(q){
     return !!(q && typeof q.prompt==='string' && q.prompt.trim() && Array.isArray(q.choices) && q.choices.length>=2 && Number.isInteger(q.answer) && q.answer>=0 && q.answer<q.choices.length);
   }
+  function questionSignature(q){
+    return [q?.subject||'',q?.skill||'',q?.passageTitle||'',q?.prompt||''].join('|').toLowerCase().replace(/\s+/g,' ').trim();
+  }
+  function recentFreshEntries(days=RECENT_FRESH_DAYS){
+    const out=[];
+    for(let i=1;i<=days;i++){
+      const d=addDays(todayKey(),-i);
+      const rows=state.dailyFreshArchive?.[d];
+      if(Array.isArray(rows)) out.push(...rows);
+    }
+    return out;
+  }
+  function pruneFreshArchive(){
+    const keepFrom=addDays(todayKey(),-(RECENT_FRESH_DAYS+3));
+    Object.keys(state.dailyFreshArchive||{}).forEach(d=>{if(d<keepFrom)delete state.dailyFreshArchive[d]});
+  }
+  function archiveFreshSession(date,items){
+    state.dailyFreshArchive=state.dailyFreshArchive||{};
+    const prior=Array.isArray(state.dailyFreshArchive[date])?state.dailyFreshArchive[date]:[];
+    const combined=[...prior,...items.map(q=>({id:q.id,signature:questionSignature(q),subject:q.subject,readingSet:q.readingSet||null}))];
+    const seen=new Set();
+    state.dailyFreshArchive[date]=combined.filter(x=>{const k=x.signature||x.id;if(!k||seen.has(k))return false;seen.add(k);return true});
+    pruneFreshArchive();
+  }
   function sanitizeStoredState(){
+    if(state.session?.mode==='daily' && !state.dailySession) state.dailySession=state.session;
+    if(state.dailySession && (!Array.isArray(state.dailySession.items) || state.dailySession.items.some(q=>!validQuestion(q)) || state.dailySession.planVersion!==SESSION_PLAN_VERSION)) state.dailySession=null;
     if(state.session && (!Array.isArray(state.session.items) || state.session.items.some(q=>!validQuestion(q)) || (state.session.mode==='daily' && state.session.planVersion!==SESSION_PLAN_VERSION))) state.session=null;
     state.reviewQueue=(state.reviewQueue||[]).filter(r=>r && validQuestion(r.question));
+    state.mistakeBook=Array.isArray(state.mistakeBook)?state.mistakeBook:[];
+    state.dailyFreshArchive=(state.dailyFreshArchive&&typeof state.dailyFreshArchive==='object')?state.dailyFreshArchive:{};
+    // Backfill older V3 review items into the permanent Mistake Book so nothing gets lost on upgrade.
+    state.reviewQueue.forEach(r=>{
+      const sig=questionSignature(r.question);
+      if(!state.mistakeBook.some(m=>m.signature===sig)){
+        state.mistakeBook.push({id:'mb'+Math.random().toString(16).slice(2),signature:sig,question:stripReview(r.question),firstMissed:r.created||todayKey(),lastMissed:r.created||todayKey(),missCount:1,lastSelectedText:'Not recorded before V3.4',mastered:false,practiceCorrect:0});
+      }
+    });
+    pruneFreshArchive();
     save();
   }
 
@@ -91,6 +129,7 @@
   $('heroStartBtn').addEventListener('click',()=>startDaily());
   $('generateSessionBtn').addEventListener('click',()=>startDaily(true));
   $('startReviewBtn').addEventListener('click',()=>startReviews());
+  $('startMistakesBtn').addEventListener('click',()=>startMistakes());
   $('hintBtn').addEventListener('click',showHint);
   $('submitAnswerBtn').addEventListener('click',submitAnswer);
   $('nextQuestionBtn').addEventListener('click',nextQuestion);
@@ -130,7 +169,7 @@
   }
 
   function sectionKeyForQuestion(q){
-    if(q && (q._reviewId || q.level==='REVIEW')) return 'review';
+    if(q && (q._reviewId || q._mistakeId || q.level==='REVIEW' || q.level==='MISTAKE')) return 'review';
     const map={Math:'math',Reading:'reading',English:'english',Science:'science','Social Studies':'social','Transfer Prep':'transfer',Reasoning:'boss'};
     return map[q?.subject]||'english';
   }
@@ -159,19 +198,20 @@
 
   function buildDailySession(forceNew=false){
     const date=todayKey();
-    if(!forceNew && state.session && state.session.date===date && state.session.mode==='daily' && !state.session.completed && state.session.planVersion===SESSION_PLAN_VERSION) return state.session;
-    const rng=rngFor(date+'|'+JSON.stringify(state.parent));
-    const target=Math.max(10,Math.min(45,Number(state.parent.dailyTarget)||25));
+    if(!forceNew && state.dailySession && state.dailySession.date===date && state.dailySession.mode==='daily' && state.dailySession.planVersion===SESSION_PLAN_VERSION) {state.session=state.dailySession;return state.dailySession;}
+    const seedSalt=forceNew?'|regen|'+Date.now():'';
+    const rng=rngFor(date+'|'+JSON.stringify(state.parent)+seedSalt);
+    const target=DAILY_FRESH_TARGET;
+    const counts=allocateTrainingCounts(target);
+    const groups={math:[],reading:[],english:[],science:[],social:[],transfer:[],boss:[]};
 
-    // Reviews belong at the END of the workout so the visible subject order is stable.
-    const due=state.reviewQueue.filter(r=>r.due<=date).sort((a,b)=>a.due.localeCompare(b.due));
-    const reviewCap=Math.min(4,Math.max(1,Math.floor(target*.16)));
-    const reviewCount=Math.min(reviewCap,due.length);
-    const coreTarget=Math.max(7,target-reviewCount);
-    const counts=allocateTrainingCounts(coreTarget);
-    const groups={math:[],reading:[],english:[],science:[],social:[],transfer:[],boss:[],review:[]};
+    // Fresh Daily 25 = NEW practice only. Mistakes are intentionally kept in a separate Review/Mistake Book workout.
+    const recent=[...recentFreshEntries(),...((state.dailyFreshArchive&&state.dailyFreshArchive[date])||[])];
+    const blockedIds=new Set(recent.map(x=>x.id).filter(Boolean));
+    const blockedSigs=new Set(recent.map(x=>x.signature).filter(Boolean));
+    const blockedReadingSets=new Set(recent.map(x=>x.readingSet).filter(Boolean));
+    const usedSigs=new Set();
 
-    // V3.2 works even with ZERO parent input. Parent data only re-weights the automatic plan.
     const mathCount=counts.math;
     const readingCount=counts.reading;
     const englishCount=counts.english;
@@ -194,67 +234,96 @@
       else if((intensity==='advanced' && i>=Math.ceil(mathCount*.55)) || (intensity==='balanced' && i>=Math.ceil(mathCount*.78))){pool=advanced.length?advanced:advDefault;level='ADVANCED'}
       else if(i%3===1){pool=placement;level='PLACEMENT'}
       else pool=foundation;
-      const skill=choice(pool,rng);
-      const q=BANK.mathQuestion(skill,rng,level);
-      q.origin=level==='SCHOOL'?'Hillbrook focus':(level==='ERB PRIORITY'?'ERB CTP skill map':(level==='PLACEMENT'?'Grade 7 / placement core':(level==='ADVANCED'?'Advanced extension':'CA Grade 7 core')));
-      groups.math.push(q);
+      let q=null;
+      for(let tries=0;tries<120;tries++){
+        const skill=choice(pool,rng);
+        const candidate=BANK.mathQuestion(skill,rng,level);
+        candidate.origin=level==='SCHOOL'?'Hillbrook focus':(level==='ERB PRIORITY'?'ERB CTP skill map':(level==='PLACEMENT'?'Grade 7 / placement core':(level==='ADVANCED'?'Advanced extension':'CA Grade 7 core')));
+        const sig=questionSignature(candidate);
+        if(!usedSigs.has(sig) && !blockedSigs.has(sig)){q=candidate;usedSigs.add(sig);break}
+      }
+      if(!q){
+        // Emergency fallback: still guarantee no duplicate inside today's 25, even if the recent cooldown has to relax.
+        for(let tries=0;tries<120;tries++){
+          const candidate=BANK.mathQuestion(choice(pool,rng),rng,level);
+          const sig=questionSignature(candidate);
+          if(!usedSigs.has(sig)){q=candidate;usedSigs.add(sig);break}
+        }
+      }
+      if(q)groups.math.push(q);
     }
 
-    // One coherent reading passage per day; keep its questions together.
-    const set=choice(BANK.readingSets,rng);
-    BANK.reading.filter(q=>q.readingSet===set.id).slice(0,readingCount).forEach(q=>groups.reading.push({...q}));
-    while(groups.reading.length<readingCount){
-      const candidates=BANK.reading.filter(q=>!groups.reading.some(x=>x.id===q.id));
-      if(!candidates.length)break;
-      groups.reading.push({...choice(candidates,rng)});
+    // One coherent reading passage per day. Rotate passages so the exact passage does not repeat for 7 days.
+    let readingPool=BANK.readingSets.filter(set=>!blockedReadingSets.has(set.id));
+    if(!readingPool.length) readingPool=BANK.readingSets;
+    const set=choice(readingPool,rng);
+    const setQuestions=BANK.shuffle(rng,BANK.reading.filter(q=>q.readingSet===set.id));
+    for(const base of setQuestions){
+      if(groups.reading.length>=readingCount)break;
+      const sig=questionSignature(base);
+      if(!usedSigs.has(sig) && !blockedSigs.has(sig)){groups.reading.push({...base});usedSigs.add(sig)}
+    }
+    if(groups.reading.length<readingCount){
+      const candidates=BANK.shuffle(rng,BANK.reading).filter(q=>!usedSigs.has(questionSignature(q))&&!blockedSigs.has(questionSignature(q)));
+      for(const q of candidates){if(groups.reading.length>=readingCount)break;groups.reading.push({...q});usedSigs.add(questionSignature(q));}
     }
 
     const englishSchool=inferStaticSkills(state.parent.schoolEnglish,'English');
     const erbEnglish=['Verbal Reasoning','Writing Concepts & Skills','Writing Mechanics'];
-    addStatic(groups.english,BANK.english,englishCount,rng,unique([...englishSchool,...erbEnglish]));
-    addStatic(groups.science,BANK.science,scienceCount,rng,inferStaticSkills(state.parent.schoolScience,'Science'));
-    addStatic(groups.social,BANK.social,socialCount,rng,inferStaticSkills(state.parent.schoolHistory,'Social Studies'));
-    addStatic(groups.transfer,BANK.transfer,transferCount,rng,[]);
-    addStatic(groups.boss,BANK.reasoning,reasoningCount,rng,[]);
-    due.slice(0,reviewCount).forEach(r=>groups.review.push({...r.question,_reviewId:r.id,_reviewStage:r.stage||0,level:'REVIEW'}));
+    addStaticFresh(groups.english,BANK.english,englishCount,rng,unique([...englishSchool,...erbEnglish]),blockedIds,blockedSigs,usedSigs);
+    addStaticFresh(groups.science,BANK.science,scienceCount,rng,inferStaticSkills(state.parent.schoolScience,'Science'),blockedIds,blockedSigs,usedSigs);
+    addStaticFresh(groups.social,BANK.social,socialCount,rng,inferStaticSkills(state.parent.schoolHistory,'Social Studies'),blockedIds,blockedSigs,usedSigs);
+    addStaticFresh(groups.transfer,BANK.transfer,transferCount,rng,[],blockedIds,blockedSigs,usedSigs);
+    addStaticFresh(groups.boss,BANK.reasoning,reasoningCount,rng,[],blockedIds,blockedSigs,usedSigs);
 
-    // Daily Training now follows the visible tab order exactly.
     let ordered=TRAINING_SECTIONS.flatMap(sec=>groups[sec.key]||[]);
+    // Fill any rare shortfall with brand-new dynamic math, never a duplicate inside the 25.
     while(ordered.length<target){
-      const q=BANK.mathQuestion(choice(foundation,rng),rng,'CORE');
+      let q=null;
+      for(let tries=0;tries<200;tries++){
+        const candidate=BANK.mathQuestion(choice(foundation,rng),rng,'CORE');
+        candidate.origin='CA Grade 7 core';
+        const sig=questionSignature(candidate);
+        if(!usedSigs.has(sig) && !blockedSigs.has(sig)){q=candidate;usedSigs.add(sig);break}
+      }
+      if(!q)break;
       groups.math.push(q);
       ordered=TRAINING_SECTIONS.flatMap(sec=>groups[sec.key]||[]);
     }
-    if(ordered.length>target){
-      // Remove overflow from the end of non-review sections while keeping Review intact when possible.
-      let extra=ordered.length-target;
-      for(const key of ['boss','transfer','social','science','english','reading','math']){
-        while(extra>0 && groups[key].length>1){groups[key].pop();extra--;}
-      }
-      while(extra>0 && groups.review.length){groups.review.pop();extra--;}
-      ordered=TRAINING_SECTIONS.flatMap(sec=>groups[sec.key]||[]);
-    }
+    ordered=ordered.slice(0,target);
+    if(ordered.length!==target) throw new Error('Could not build 25 unique fresh questions.');
 
-    state.session={date,mode:'daily',planVersion:SESSION_PLAN_VERSION,items:ordered,index:0,answers:[],completed:false};
-    save();return state.session;
+    state.dailySession={date,mode:'daily',planVersion:SESSION_PLAN_VERSION,items:ordered,index:0,answers:[],completed:false};
+    state.session=state.dailySession;
+    archiveFreshSession(date,ordered);
+    save();return state.dailySession;
   }
 
-  function addStatic(items,bank,count,rng,preferredSkills){
-    let pool=bank;
+  function addStaticFresh(items,bank,count,rng,preferredSkills,blockedIds,blockedSigs,usedSigs){
+    const pickOne=(pool,strictRecent=true)=>{
+      const candidates=BANK.shuffle(rng,pool).filter(q=>{
+        const sig=questionSignature(q);
+        return !usedSigs.has(sig) && (!strictRecent || (!blockedIds.has(q.id)&&!blockedSigs.has(sig)));
+      });
+      return candidates[0]||null;
+    };
     for(let i=0;i<count;i++){
-      if(preferredSkills.length && i<Math.ceil(count/2)){
-        const preferred=bank.filter(q=>preferredSkills.includes(q.skill));
-        if(preferred.length)pool=preferred; else pool=bank;
-      } else pool=bank;
-      const candidates=BANK.shuffle(rng,pool).filter(q=>!items.some(x=>x.id===q.id));
-      items.push({...choice(candidates.length?candidates:pool,rng)});
+      const preferred=(preferredSkills.length && i<Math.ceil(count/2))?bank.filter(q=>preferredSkills.includes(q.skill)):[];
+      let q=preferred.length?pickOne(preferred,true):null;
+      if(!q)q=pickOne(bank,true);
+      if(!q && preferred.length)q=pickOne(preferred,false);
+      if(!q)q=pickOne(bank,false);
+      if(!q)break;
+      items.push({...q});usedSigs.add(questionSignature(q));
     }
   }
 
   function startDaily(forceNew=false){
     currentSessionMode='daily';
-    buildDailySession(forceNew);
-    currentIndex=state.session.index||0;
+    const daily=buildDailySession(forceNew);
+    state.session=daily;
+    save();
+    currentIndex=daily.index||0;
     switchView('training');
   }
 
@@ -263,6 +332,15 @@
     if(!due.length){alert('No reviews are due right now. Nice work. 🏆');return}
     currentSessionMode='review';
     state.session={date,mode:'review',items:due.map(r=>({...r.question,_reviewId:r.id,_reviewStage:r.stage||0,level:'REVIEW'})),index:0,answers:[],completed:false};save();currentIndex=0;switchView('training');
+  }
+
+  function startMistakes(){
+    const active=(state.mistakeBook||[]).filter(m=>!m.mastered && validQuestion(m.question)).sort((a,b)=>(b.missCount||0)-(a.missCount||0)||String(b.lastMissed).localeCompare(String(a.lastMissed)));
+    if(!active.length){alert('No active mistakes right now. Keep going. 🏆');return}
+    const chosen=active.slice(0,25);
+    currentSessionMode='mistakes';
+    state.session={date:todayKey(),mode:'mistakes',items:chosen.map(m=>{const rq=state.reviewQueue.find(r=>questionSignature(r.question)===m.signature);return {...m.question,_mistakeId:m.id,_reviewId:rq?.id,level:'MISTAKE'};}),index:0,answers:[],completed:false};
+    save();currentIndex=0;switchView('training');
   }
 
   function sectionStats(session,key){
@@ -278,7 +356,8 @@
     if(!el)return;
     if(!s || s.completed){el.innerHTML='';return}
     const activeKey=sectionKeyForQuestion(s.items[currentIndex]);
-    el.innerHTML=TRAINING_SECTIONS.map(sec=>{
+    const sections=s.mode==='daily'?TRAINING_SECTIONS:[REVIEW_SECTION];
+    el.innerHTML=sections.map(sec=>{
       const st=sectionStats(s,sec.key);
       const disabled=st.total===0;
       const isActive=sec.key===activeKey;
@@ -306,8 +385,8 @@
     const s=state.session;
     if(!s || s.completed){$('trainingEmpty').classList.remove('hidden');$('questionStage').classList.add('hidden');$('sessionComplete').classList.add('hidden');return}
     $('trainingEmpty').classList.add('hidden');$('questionStage').classList.remove('hidden');$('sessionComplete').classList.add('hidden');
-    $('trainingTitle').textContent=s.mode==='review'?'Review Workout':'Today’s #22 Workout';
-    $('trainingSummary').textContent=s.mode==='review'?`${s.items.length} review questions ready`:'Choose a subject below — tap Math, Reading, English, Science, Social Studies, Transfer Prep, Boss Challenge, or Review.';
+    $('trainingTitle').textContent=s.mode==='review'?'Spaced Review Workout':(s.mode==='mistakes'?'Mistake Book Workout':'Today’s #22 Workout');
+    $('trainingSummary').textContent=s.mode==='daily'?'25 fresh questions today — no duplicates in the set, and exact questions are rotated away for 7 days. Mistake review is separate.':`${s.items.length} mistake-review questions ready`;
     currentIndex=Math.min(s.index||0,s.items.length-1);
     updateSessionProgress();
     renderTrainingSectionTabs();
@@ -345,36 +424,54 @@
     $('feedbackBox').textContent=correct?'✅ Correct — good read.':'❌ Not yet. Use the explanation, then this skill will come back in review.';
     $('feedbackBox').className='feedback '+(correct?'correct':'incorrect');
     $('explanationBox').innerHTML=`<strong>WHY:</strong> ${esc(q.explanation)}<br><strong>SKILL:</strong> ${esc(q.skill)}${q.origin?`<br><strong>TRACK:</strong> ${esc(q.origin)}`:''}`;$('explanationBox').classList.remove('hidden');$('questionNav').classList.remove('hidden');$('submitAnswerBtn').disabled=true;
-    recordAttempt(q,correct);s.answers[currentIndex]={correct,selected:selectedChoice};save();updateSessionProgress();renderTrainingSectionTabs();
+    recordAttempt(q,correct,selectedChoice);s.answers[currentIndex]={correct,selected:selectedChoice};if(s.mode==='daily')state.dailySession=s;save();updateSessionProgress();renderTrainingSectionTabs();
   }
 
-  function recordAttempt(q,correct){
+  function recordAttempt(q,correct,selectedIndex){
     const date=todayKey();const key=`${q.subject}|${q.skill}`;
     const a=state.attempts[key]||{correct:0,total:0,last:null};a.total++;if(correct)a.correct++;a.last=date;state.attempts[key]=a;
-    state.history.push({date,subject:q.subject,skill:q.skill,correct,id:q.id});if(state.history.length>1000)state.history=state.history.slice(-1000);
+    state.history.push({date,subject:q.subject,skill:q.skill,correct,id:q.id,signature:questionSignature(q)});if(state.history.length>1500)state.history=state.history.slice(-1500);
     state.xp += correct ? (q.subject==='Reasoning'?22:2) : 1;
+
+    const sig=questionSignature(q);
+    let mb=state.mistakeBook.find(m=>m.signature===sig);
+    if(!correct){
+      const selectedText=(q.choices&&selectedIndex>=0)?String(q.choices[selectedIndex]):'No answer recorded';
+      if(!mb){
+        mb={id:'mb'+Date.now()+Math.random().toString(16).slice(2),signature:sig,question:stripReview(q),firstMissed:date,lastMissed:date,missCount:0,lastSelectedText:selectedText,mastered:false,practiceCorrect:0};
+        state.mistakeBook.push(mb);
+      }
+      mb.lastMissed=date;mb.missCount=(mb.missCount||0)+1;mb.lastSelectedText=selectedText;mb.mastered=false;mb.practiceCorrect=0;
+    }else if(mb){
+      mb.practiceCorrect=(mb.practiceCorrect||0)+1;
+    }
 
     if(q._reviewId){
       const idx=state.reviewQueue.findIndex(r=>r.id===q._reviewId);
       if(idx>=0){
-        if(correct){const stage=(state.reviewQueue[idx].stage||0)+1;const intervals=[3,7,14,30];if(stage>=4)state.reviewQueue.splice(idx,1);else{state.reviewQueue[idx].stage=stage;state.reviewQueue[idx].due=addDays(date,intervals[stage-1]);}}
+        if(correct){
+          const stage=(state.reviewQueue[idx].stage||0)+1;const intervals=[3,7,14,30];
+          if(stage>=4){state.reviewQueue.splice(idx,1);if(mb)mb.mastered=true;}
+          else{state.reviewQueue[idx].stage=stage;state.reviewQueue[idx].due=addDays(date,intervals[stage-1]);}
+        }
         else{state.reviewQueue[idx].stage=0;state.reviewQueue[idx].due=addDays(date,1);}
       }
     } else if(!correct){
-      const exists=state.reviewQueue.some(r=>r.question.id===q.id && r.due>=date);
+      const exists=state.reviewQueue.some(r=>questionSignature(r.question)===sig);
       if(!exists)state.reviewQueue.push({id:'rv'+Date.now()+Math.random().toString(16).slice(2),question:stripReview(q),due:addDays(date,1),stage:0,created:date});
     }
   }
+
   function stripReview(q){const x={...q};delete x._reviewId;delete x._reviewStage;return x}
 
   function nextQuestion(){
     const s=state.session;if(!s)return;
-    currentIndex++;s.index=currentIndex;save();
+    currentIndex++;s.index=currentIndex;if(s.mode==='daily')state.dailySession=s;save();
     if(currentIndex>=s.items.length)completeSession();else showCurrentQuestion();
   }
 
   function completeSession(){
-    const s=state.session;if(!s)return;s.completed=true;s.index=s.items.length;
+    const s=state.session;if(!s)return;s.completed=true;s.index=s.items.length;if(s.mode==='daily')state.dailySession=s;
     const correct=s.answers.filter(a=>a&&a.correct).length;const total=s.answers.length;state.xp+=22;
     updateStreak();save();
     $('questionStage').classList.add('hidden');$('trainingEmpty').classList.add('hidden');$('sessionComplete').classList.remove('hidden');
@@ -394,7 +491,7 @@
   function recentHistory(days=7){const cutoff=addDays(todayKey(),-(days-1));return state.history.filter(h=>h.date>=cutoff)}
   function statsFor(subject){const arr=recentHistory().filter(h=>h.subject===subject || (subject==='English'&&h.subject==='Reading'));const c=arr.filter(x=>x.correct).length;return {total:arr.length,correct:c,pct:arr.length?Math.round(c/arr.length*100):null}}
   function renderDashboard(){
-    const s=state.session&&state.session.date===todayKey()?state.session:null;const done=s?s.answers.filter(Boolean).length:0,total=s?s.items.length:0;$('todayProgress').textContent=`${done}/${total}`;$('streakCount').textContent=state.streak;$('xpCount').textContent=state.xp;
+    const s=state.dailySession&&state.dailySession.date===todayKey()?state.dailySession:null;const done=s?s.answers.filter(Boolean).length:0,total=s?s.items.length:DAILY_FRESH_TARGET;$('todayProgress').textContent=`${done}/${total}`;$('streakCount').textContent=state.streak;$('xpCount').textContent=state.xp;
     $('dashSchoolFocus').textContent=[state.parent.schoolMath,state.parent.schoolEnglish,state.parent.schoolScience,state.parent.schoolHistory].filter(Boolean).join(' · ')||'Not set yet';
     $('dashAdvancedFocus').textContent=[state.parent.advancedMath,state.parent.advancedOther].filter(Boolean).join(' · ')||'Not set yet';
     $('milestoneName').textContent=state.parent.milestone||'8th Grade Math Placement Readiness';$('milestoneDate').textContent='Date: '+(state.parent.milestoneDate||'needs confirmation');$('milestoneNote').textContent=state.parent.milestoneNotes||'Build evidence before the decision window.';
@@ -419,8 +516,24 @@
   }
 
   function renderReview(){
-    const date=todayKey();const sorted=[...state.reviewQueue].sort((a,b)=>a.due.localeCompare(b.due));const due=sorted.filter(r=>r.due<=date);$('reviewCount').textContent=`${due.length} DUE`;
-    $('reviewQueueList').innerHTML=sorted.length?sorted.map(r=>`<div class="review-item"><div><h3>${esc(r.question.subject)} · ${esc(r.question.skill)}</h3><p>${esc(r.question.prompt)}</p></div><div class="due">${r.due<=date?'DUE NOW':'Due '+r.due}<br>Stage ${r.stage||0}/4</div></div>`).join(''):'<div class="empty-state"><div class="big-icon">✅</div><h2>Queue clear.</h2><p>Wrong answers will automatically come back tomorrow, then 3, 7, 14, and 30 days later as they are mastered.</p></div>';
+    const date=todayKey();
+    const sorted=[...state.reviewQueue].sort((a,b)=>a.due.localeCompare(b.due));
+    const due=sorted.filter(r=>r.due<=date);
+    $('reviewCount').textContent=`${due.length} DUE`;
+    $('reviewQueueList').innerHTML=sorted.length?sorted.map(r=>`<div class="review-item"><div><h3>${esc(r.question.subject)} · ${esc(r.question.skill)}</h3><p>${esc(r.question.prompt)}</p></div><div class="due">${r.due<=date?'DUE NOW':'Due '+r.due}<br>Stage ${r.stage||0}/4</div></div>`).join(''):'<div class="empty-state"><div class="big-icon">✅</div><h2>Queue clear.</h2><p>Missed questions will come back on a spaced schedule after they enter the Mistake Book.</p></div>';
+
+    const mistakes=[...(state.mistakeBook||[])].sort((a,b)=>Number(a.mastered)-Number(b.mastered)||(b.missCount||0)-(a.missCount||0)||String(b.lastMissed).localeCompare(String(a.lastMissed)));
+    const active=mistakes.filter(m=>!m.mastered);
+    $('mistakeCount').textContent=`${active.length} ACTIVE · ${mistakes.length} TOTAL`;
+    $('mistakeBookList').innerHTML=mistakes.length?mistakes.map(m=>{
+      const q=m.question||{};const correctText=q.choices?.[q.answer]??'—';
+      return `<article class="mistake-item ${m.mastered?'mastered':''}">
+        <div class="mistake-head"><div><span class="mistake-subject">${esc(q.subject)} · ${esc(q.skill)}</span><h3>${esc(q.prompt)}</h3></div><span class="mistake-status">${m.mastered?'MASTERED':'REVIEW'}</span></div>
+        <div class="mistake-answer-grid"><div><small>LAST WRONG ANSWER</small><strong>${esc(m.lastSelectedText||'Not recorded')}</strong></div><div><small>CORRECT ANSWER</small><strong>${esc(correctText)}</strong></div></div>
+        <p class="mistake-why"><b>Why:</b> ${esc(q.explanation||'Review the rule and solve it again.')}</p>
+        <div class="mistake-foot"><span>Missed ${m.missCount||1}× · First ${esc(m.firstMissed||'—')} · Last ${esc(m.lastMissed||'—')}</span><span>${m.mastered?'✅ Mastered after spaced review':'🔁 Keep practicing'}</span></div>
+      </article>`;
+    }).join(''):'<div class="empty-state"><div class="big-icon">🏆</div><h2>No mistakes yet.</h2><p>Every wrong answer will be saved here permanently with the correct answer and explanation.</p></div>';
   }
 
   const roadmapData=[
@@ -442,12 +555,12 @@
   ];
   function renderParent(){
     renderErbGrid('parentErbScoreGrid');
-    const p=state.parent;$('schoolMathInput').value=p.schoolMath;$('schoolEnglishInput').value=p.schoolEnglish;$('schoolScienceInput').value=p.schoolScience;$('schoolHistoryInput').value=p.schoolHistory;$('schoolNotesInput').value=p.schoolNotes;$('advancedMathInput').value=p.advancedMath;$('advancedOtherInput').value=p.advancedOther;$('milestoneInput').value=p.milestone;$('milestoneDateInput').value=p.milestoneDate;$('milestoneNotesInput').value=p.milestoneNotes;$('dailyTargetInput').value=p.dailyTarget;$('mathIntensityInput').value=p.mathIntensity;
+    const p=state.parent;$('schoolMathInput').value=p.schoolMath;$('schoolEnglishInput').value=p.schoolEnglish;$('schoolScienceInput').value=p.schoolScience;$('schoolHistoryInput').value=p.schoolHistory;$('schoolNotesInput').value=p.schoolNotes;$('advancedMathInput').value=p.advancedMath;$('advancedOtherInput').value=p.advancedOther;$('milestoneInput').value=p.milestone;$('milestoneDateInput').value=p.milestoneDate;$('milestoneNotesInput').value=p.milestoneNotes;$('mathIntensityInput').value=p.mathIntensity;
     $('placementChecklist').innerHTML=placementItems.map((x,i)=>`<label class="check-row"><input type="checkbox" data-placement="${i}" ${p.placementChecks[i]?'checked':''}><span>${esc(x)}</span></label>`).join('');
     document.querySelectorAll('[data-placement]').forEach(cb=>cb.addEventListener('change',()=>{state.parent.placementChecks[cb.dataset.placement]=cb.checked;save()}));
   }
   function saveParent(){
-    const p=state.parent;p.schoolMath=$('schoolMathInput').value.trim();p.schoolEnglish=$('schoolEnglishInput').value.trim();p.schoolScience=$('schoolScienceInput').value.trim();p.schoolHistory=$('schoolHistoryInput').value.trim();p.schoolNotes=$('schoolNotesInput').value.trim();p.advancedMath=$('advancedMathInput').value.trim();p.advancedOther=$('advancedOtherInput').value.trim();p.milestone=$('milestoneInput').value.trim()||'8th Grade Math Placement Readiness';p.milestoneDate=$('milestoneDateInput').value.trim()||'Needs confirmation with Hillbrook';p.milestoneNotes=$('milestoneNotesInput').value.trim();p.dailyTarget=Math.max(10,Math.min(45,Number($('dailyTargetInput').value)||25));p.mathIntensity=$('mathIntensityInput').value;state.session=null;save();alert('Saved. Tomorrow’s training will use this school + advanced focus. 🏀 #22');renderDashboard();
+    const p=state.parent;p.schoolMath=$('schoolMathInput').value.trim();p.schoolEnglish=$('schoolEnglishInput').value.trim();p.schoolScience=$('schoolScienceInput').value.trim();p.schoolHistory=$('schoolHistoryInput').value.trim();p.schoolNotes=$('schoolNotesInput').value.trim();p.advancedMath=$('advancedMathInput').value.trim();p.advancedOther=$('advancedOtherInput').value.trim();p.milestone=$('milestoneInput').value.trim()||'8th Grade Math Placement Readiness';p.milestoneDate=$('milestoneDateInput').value.trim()||'Needs confirmation with Hillbrook';p.milestoneNotes=$('milestoneNotesInput').value.trim();p.dailyTarget=DAILY_FRESH_TARGET;p.mathIntensity=$('mathIntensityInput').value;state.dailySession=null;if(state.session?.mode==='daily')state.session=null;save();alert('Saved. Tomorrow’s fresh 25 will use this school + advanced focus. 🏀 #22');renderDashboard();
   }
   function resetAll(){if(!confirm('Reset ALL Audrey #22 progress, review history, streaks, and parent settings?'))return;state=defaultState();save();renderParent();renderDashboard();alert('Reset complete.')}
   function exportProgress(){

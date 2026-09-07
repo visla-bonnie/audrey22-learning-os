@@ -97,3 +97,26 @@ footer{display:flex;justify-content:space-around;gap:12px;flex-wrap:wrap;padding
 .training-section-tab.subject-boss:not(.active){border-left-color:#34495e}
 .training-section-tab.subject-review:not(.active){border-left-color:#00a6a6}
 @media(max-width:600px){.training-section-tabs{gap:6px}.training-section-tab{padding:8px 9px;min-height:46px}.training-section-tab strong{font-size:11px}.training-tab-icon{font-size:16px}}
+
+/* V3.4 fresh-25 + permanent Mistake Book */
+.review-actions{margin-top:0;justify-content:flex-end}
+.review-queue-card{margin-top:18px}
+.mistake-list{display:grid;gap:12px}
+.mistake-item{border:1px solid #f0c8a4;border-left:5px solid var(--orange);border-radius:17px;padding:16px;background:#fffaf5}
+.mistake-item.mastered{border-color:#bfe4d2;border-left-color:var(--green);background:#f5fcf8;opacity:.82}
+.mistake-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.mistake-head h3{margin:5px 0 0;font-size:16px;line-height:1.45;color:var(--navy)}
+.mistake-subject{font-size:10px;font-weight:950;letter-spacing:.08em;text-transform:uppercase;color:#9b6508}
+.mistake-status{font-size:9px;font-weight:950;letter-spacing:.09em;border-radius:999px;padding:6px 8px;background:#fff0df;color:#a95800;white-space:nowrap}
+.mistake-item.mastered .mistake-status{background:#e3f7ed;color:#176b47}
+.mistake-answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
+.mistake-answer-grid>div{border:1px solid var(--line);border-radius:13px;background:#fff;padding:11px 12px;display:grid;gap:4px}
+.mistake-answer-grid small{font-size:9px;font-weight:950;letter-spacing:.08em;color:var(--muted)}
+.mistake-answer-grid strong{font-size:13px;line-height:1.4}
+.mistake-why{font-size:13px;line-height:1.55;color:#45556b;margin:12px 0 0}
+.mistake-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px dashed #e6d6c8;margin-top:12px;padding-top:10px;color:var(--muted);font-size:11px;font-weight:700}
+.fixed-training-rule{border:1px solid #c8e5fa;background:#eef7ff;border-radius:15px;padding:13px 14px;display:grid;grid-template-columns:1fr auto;gap:3px 12px;align-items:center}
+.fixed-training-rule strong{color:var(--navy)}
+.fixed-training-rule span{background:var(--navy);color:#fff;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:950;letter-spacing:.08em}
+.fixed-training-rule small{grid-column:1/-1;color:var(--muted);line-height:1.45}
+@media(max-width:600px){.mistake-answer-grid{grid-template-columns:1fr}.mistake-head{flex-direction:column}.review-actions{justify-content:flex-start}}
