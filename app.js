@@ -11,8 +11,8 @@
     {name:'Mathematics',scale:558,nn:59,inorm:29,focus:'Concepts · application · computation · word problems'}
   ];
   const STORE_KEY='audrey22_learning_os_v3';
-  const APP_VERSION='3.2';
-  const SESSION_PLAN_VERSION='ordered-subject-tabs-v1';
+  const APP_VERSION='3.3';
+  const SESSION_PLAN_VERSION='ordered-clickable-subject-tabs-v2';
   const TRAINING_SECTIONS=[
     {key:'math',label:'Math',icon:'🧮'},
     {key:'reading',label:'Reading',icon:'📖'},
@@ -281,18 +281,25 @@
     el.innerHTML=TRAINING_SECTIONS.map(sec=>{
       const st=sectionStats(s,sec.key);
       const disabled=st.total===0;
-      return `<button class="training-section-tab ${sec.key===activeKey?'active':''} ${st.done===st.total&&st.total?'complete':''}" data-training-section="${sec.key}" ${disabled?'disabled':''}><span>${sec.icon}</span><strong>${sec.label}</strong><small>${st.done}/${st.total}</small></button>`;
+      const isActive=sec.key===activeKey;
+      const isComplete=st.total>0 && st.done===st.total;
+      return `<button type="button" class="training-section-tab subject-${sec.key} ${isActive?'active':''} ${isComplete?'complete':''}" data-training-section="${sec.key}" aria-pressed="${isActive?'true':'false'}" ${disabled?'disabled':''}><span class="training-tab-icon">${sec.icon}</span><span class="training-tab-copy"><strong>${sec.label}</strong><small>${st.done}/${st.total} done</small></span></button>`;
     }).join('');
-    el.querySelectorAll('[data-training-section]').forEach(btn=>btn.addEventListener('click',()=>jumpToTrainingSection(btn.dataset.trainingSection)));
+    el.querySelectorAll('[data-training-section]').forEach(btn=>{
+      btn.addEventListener('click',()=>jumpToTrainingSection(btn.dataset.trainingSection));
+    });
   }
 
   function jumpToTrainingSection(key){
     const s=state.session;if(!s||s.completed)return;
     const st=sectionStats(s,key);if(!st.indices.length)return;
-    const next=st.indices.find(i=>!s.answers?.[i]);
-    currentIndex=next===undefined?st.indices[0]:next;
-    s.index=currentIndex;save();showCurrentQuestion();
-    $('questionStage')?.scrollIntoView({behavior:'smooth',block:'start'});
+    // Always jump to the first unanswered question in that subject. If the subject is complete, open its first question for review.
+    const nextUnanswered=st.indices.find(i=>!s.answers?.[i]);
+    currentIndex=nextUnanswered===undefined?st.indices[0]:nextUnanswered;
+    s.index=currentIndex;save();
+    showCurrentQuestion();
+    const stage=$('questionStage');
+    if(stage) stage.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
   function renderTraining(){
@@ -300,7 +307,7 @@
     if(!s || s.completed){$('trainingEmpty').classList.remove('hidden');$('questionStage').classList.add('hidden');$('sessionComplete').classList.add('hidden');return}
     $('trainingEmpty').classList.add('hidden');$('questionStage').classList.remove('hidden');$('sessionComplete').classList.add('hidden');
     $('trainingTitle').textContent=s.mode==='review'?'Review Workout':'Today’s #22 Workout';
-    $('trainingSummary').textContent=s.mode==='review'?`${s.items.length} due review questions`:'Work in order, or tap a subject to jump there.';
+    $('trainingSummary').textContent=s.mode==='review'?`${s.items.length} review questions ready`:'Choose a subject below — tap Math, Reading, English, Science, Social Studies, Transfer Prep, Boss Challenge, or Review.';
     currentIndex=Math.min(s.index||0,s.items.length-1);
     updateSessionProgress();
     renderTrainingSectionTabs();
@@ -447,7 +454,21 @@
     const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`audrey22-progress-${todayKey()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),500);
   }
 
+  async function retireOldOfflineCache(){
+    // GitHub Pages updates matter more than offline caching for this app. Old service workers caused stale UI after uploads.
+    try{
+      if('serviceWorker' in navigator){
+        const regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r=>r.unregister()));
+      }
+      if('caches' in window){
+        const keys=await caches.keys();
+        await Promise.all(keys.filter(k=>k.startsWith('audrey22-')).map(k=>caches.delete(k)));
+      }
+    }catch(e){}
+  }
+
   // Initial render
   renderDashboard();
-  if('serviceWorker' in navigator && location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  retireOldOfflineCache();
 })();
